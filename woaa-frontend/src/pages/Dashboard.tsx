@@ -1,5 +1,8 @@
 // src/pages/Dashboard.tsx
 
+import Chart from "../components/chart";
+import RadixButton from "../components/ui/RdixButton";
+
 export default function Dashboard() {
   return (
     <div className="min-h-screen w-full space-y-2 bg-gray-100 p-2">
@@ -29,7 +32,9 @@ export default function Dashboard() {
           <div className="flex h-full gap-2">
             {/* Stock Chart */}
             <div className="w-[60%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center">
-              <p className="text-gray-500 text-sm">[Stock Chart Placeholder]</p>
+              <div className="w-full h-full border border-amber-700">
+                <Chart />
+              </div>
             </div>
             {/* Stock Table */}
             <div className="w-[40%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center">
@@ -41,57 +46,95 @@ export default function Dashboard() {
         <div className="flex-[3] border border-orange-400 p-2 rounded-md">
           <div className="flex h-full gap-1">
             {/* Action 1 */}
-            <div className="flex-1 border border-gray-300 rounded-md p-1 bg-gray-50 shadow-sm flex flex-col justify-between gap-1">
-              {/* Number of Shares */}
-              <div className="flex items-center gap-2">
-                <label className="w-1/2 text-xs text-gray-500">
-                  Number of Shares
-                </label>
-                <input
-                  type="number"
-                  className="flex-1 border border-gray-300 text-black rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="10"
-                />
+            <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-between gap-4">
+              {/* Left: Inputs */}
+              <div className="flex flex-col gap-2 w-2/3">
+                {/* Number of Shares */}
+                <div className="flex items-center gap-2">
+                  <label className="w-1/2 text-xs text-gray-500">
+                    Number of Shares
+                  </label>
+                  <input
+                    type="number"
+                    className="flex-1 border border-gray-300 text-black rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="10"
+                  />
+                </div>
+                {/* Stop Loss */}
+                <div className="flex items-center gap-2">
+                  <label className="w-1/2 text-xs text-gray-500">
+                    Stop Loss
+                  </label>
+                  <input
+                    type="number"
+                    className="flex-1 border border-gray-300 text-black rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="100.00"
+                  />
+                </div>
+                {/* Trailing Stop Loss */}
+                <div className="flex items-center gap-2">
+                  <label className="w-1/2 text-xs text-gray-500">
+                    Trailing Stop Loss
+                  </label>
+                  <input
+                    type="number"
+                    className="flex-1 border border-gray-300 text-black rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="2.5"
+                  />
+                </div>
               </div>
-              {/* Stop Loss */}
-              <div className="flex items-center gap-2">
-                <label className="w-1/2 text-xs text-gray-500">Stop Loss</label>
-                <input
-                  type="number"
-                  className="flex-1 border border-gray-300 text-black rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="100.00"
-                />
-              </div>
-              {/* Trailing Stop Loss */}
-              <div className="flex items-center gap-2">
-                <label className="w-1/2 text-xs text-gray-500">
-                  Trailing Stop Loss
-                </label>
-                <input
-                  type="number"
-                  className="flex-1 border border-gray-300 text-black rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="2.5"
-                />
-              </div>
-              {/* Buy/Sell Buttons */}
-              <div className="flex justify-between gap-2">
-                <button className="flex-1 max-h-[80px] bg-green-500 hover:bg-green-600 text-xs py-1 rounded-md">
-                  Buyy
+              {/* Right: Buttons */}
+              <div className="flex flex-col gap-2 w-1/3 justify-between">
+                <button className="w-full bg-green-500 hover:bg-green-600 text-white text-xs py-1 rounded-md active:outline-none active:ring-0">
+                  Buy
                 </button>
-                <button className="flex-1 max-h-[80px] bg-red-500 hover:bg-red-600 text-xs py-1 rounded-md">
-                  Selll
+                <button className="w-full bg-red-500 hover:bg-red-600 text-white text-xs py-1 rounded-md active:outline-none active:ring-0">
+                  Sell
                 </button>
               </div>
             </div>
 
             {/* Action 2 */}
-            <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center">
-              <p className="text-gray-500 text-sm">[Action 2 Placeholder]</p>
+            <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex flex-col justify-between text-xs gap-3">
+              {/* Speed Control */}
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-gray-600 w-1/2">Simulation Speed</label>
+                <select className="flex-1 bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  {[1, 2, 3, 4, 5].map((speed) => (
+                    <option key={speed} value={speed}>
+                      {speed}x
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Start Date */}
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-gray-600 w-1/2">Start Date</label>
+                <input
+                  type="date"
+                  className="flex-1 bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Pause Button */}
+              <div className="flex justify-end">
+                <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-xs focus:outline-none active:outline-none">
+                  Pause
+                </button>
+              </div>
             </div>
 
             {/* Action 3 */}
-            <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center">
-              <p className="text-gray-500 text-sm">[Action 3 Placeholder]</p>
+            <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex items-center justify-center">
+              <div className="flex gap-4">
+                <button className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-4 py-1 rounded-md focus:outline-none active:outline-none">
+                  Power Up
+                </button>
+                <button className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-4 py-1 rounded-md focus:outline-none active:outline-none">
+                  Flatten
+                </button>
+              </div>
             </div>
           </div>
         </div>
