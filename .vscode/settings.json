@@ -1,3 +1,4 @@
 {
-  "python.analysis.extraPaths": ["${workspaceFolder}/woaa-backend/app"]
+  "python.analysis.extraPaths": ["${workspaceFolder}/woaa-backend/app"],
+  "postman.settings.dotenv-detection-notification-visibility": false
 }
