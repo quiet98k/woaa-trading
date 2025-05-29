@@ -1,7 +1,8 @@
 from sqlalchemy import Column, String, Float, DateTime, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
-import uuid, enum
+import uuid
+import enum
 
 class PositionType(str, enum.Enum):
     long = "Long"

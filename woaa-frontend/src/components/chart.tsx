@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Renders a sample candlestick chart using ApexCharts with static price data.
+ * This is a demo component to visualize financial data over time.
+ */
+
 import React from "react";
 import ReactApexChart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";

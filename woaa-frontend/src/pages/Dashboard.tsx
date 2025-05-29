@@ -1,7 +1,9 @@
-// src/pages/Dashboard.tsx
+/**
+ * @fileoverview Dashboard page that displays the user and admin views for the trading simulation.
+ * Includes simulated and real balances, a candlestick chart, user trade controls, and admin fee settings.
+ */
 
 import Chart from "../components/chart";
-import RadixButton from "../components/ui/RdixButton";
 
 export default function Dashboard() {
   return (
