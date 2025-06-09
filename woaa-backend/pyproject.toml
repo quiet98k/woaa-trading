@@ -9,9 +9,17 @@ dependencies = [
     "fastapi[standard]>=0.115.12",
     "jose>=1.0.0",
     "passlib>=1.7.4",
-    "psycopg2-binary>=2.9.10",
     "python-dotenv>=1.1.0",
     "python-jose>=3.5.0",
     "sqlalchemy>=2.0.41",
     "sqlalchemy-orm>=1.2.10",
+]
+
+[dependency-groups]
+dev = [
+    "httpx[http2]>=0.28.1",
+    "psycopg[binary]>=3.2.9",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "sqlalchemy>=2.0.41",
 ]
