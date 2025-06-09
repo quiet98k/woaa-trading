@@ -27,6 +27,9 @@ def create_position(position: schemas.PositionCreate, db: Session = Depends(get_
     Returns:
         The created Position.
     """
+    
+    #TODO: loging
+    
     return service.create_position(db, position)
 
 
@@ -41,6 +44,9 @@ def get_all_positions(db: Session = Depends(get_db)):
     Returns:
         A list of all Position records.
     """
+    
+    #TODO: loging
+    
     return service.get_positions(db)
 
 
@@ -56,6 +62,9 @@ def get_position(position_id: UUID, db: Session = Depends(get_db)):
     Returns:
         The requested Position.
     """
+    
+    #TODO: loging
+    
     db_position = service.get_position_by_id(db, position_id)
     if not db_position:
         raise HTTPException(status_code=404, detail="Position not found")
@@ -75,6 +84,10 @@ def update_position(position_id: UUID, updates: schemas.PositionUpdate, db: Sess
     Returns:
         The updated Position.
     """
+    
+    #TODO: loging
+    #TODO: testing
+    
     return service.update_position(db, position_id, updates)
 
 
@@ -87,4 +100,8 @@ def delete_position(position_id: UUID, db: Session = Depends(get_db)):
         position_id: UUID of the position to delete.
         db: SQLAlchemy session dependency.
     """
+    
+    #TODO: loging
+    #TODO: testing
+    
     service.delete_position(db, position_id)

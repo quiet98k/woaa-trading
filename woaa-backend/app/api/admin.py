@@ -9,3 +9,7 @@ from app.auth import get_current_user  # if auth-protected
 
 
 router = APIRouter()
+
+#TODO: Implement
+#TODO: loging
+#TODO: testing

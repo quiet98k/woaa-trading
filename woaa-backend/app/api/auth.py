@@ -13,8 +13,12 @@ from fastapi.security import OAuth2PasswordRequestForm
 from app.database import get_db
 from app.schemas.user import UserCreate, UserOut, AdminCreate
 from app.models.user import User
-from app.utils.security import hash_password, verify_password
 from app.auth import create_access_token, get_current_admin_user
+from app.services.user import (
+    create_user_with_settings,
+    create_admin_user,
+)
+from app.services.log import log_action
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -34,20 +38,12 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     Raises:
         HTTPException: If the email or username is already taken.
     """
-    if db.query(User).filter(User.email == user.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
-    if db.query(User).filter(User.username == user.username).first():
-        raise HTTPException(status_code=400, detail="Username already taken")
 
-    new_user = User(
-        username=user.username,
-        email=user.email,
-        hashed_password=hash_password(user.password),
-        is_admin=False
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    #TODO: testing
+
+    new_user = create_user_with_settings(db, user)
+    log_action(db, new_user.id, "register", f"User {new_user.username} registered.")
+
     return new_user
 
 
@@ -71,20 +67,12 @@ def register_admin(
     Raises:
         HTTPException: If username or email already exists.
     """
-    if db.query(User).filter(User.email == admin.email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
-    if db.query(User).filter(User.username == admin.username).first():
-        raise HTTPException(status_code=400, detail="Username already taken")
 
-    new_admin = User(
-        username=admin.username,
-        email=admin.email,
-        hashed_password=hash_password(admin.password),
-        is_admin=True
-    )
-    db.add(new_admin)
-    db.commit()
-    db.refresh(new_admin)
+    new_admin = create_admin_user(db, admin)
+
+    #TODO: loging
+    #TODO: testing
+
     return new_admin
 
 
@@ -103,11 +91,21 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     Raises:
         HTTPException: If credentials are invalid.
     """
+
+    #TODO: testing
+
     user = db.query(User).filter(User.email == form_data.username).first()
-    if not user or not verify_password(form_data.password, user.hashed_password):  # type: ignore
+    if not user or not user.hashed_password or not user.hashed_password.strip() or not user.email:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    from app.utils.security import verify_password
+    if not verify_password(form_data.password, user.hashed_password):  # type: ignore
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token({"sub": str(user.id)})
+
+    log_action(db, user.id, "login", f"User {user.username} logged in.")
+
     return {
         "access_token": token,
         "token_type": "bearer",

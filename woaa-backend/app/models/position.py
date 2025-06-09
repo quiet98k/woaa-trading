@@ -40,6 +40,9 @@ class Position(Base):
         - realized_pl: Realized profit or loss
         - status: Position status (open or closed)
     """
+    
+    #TODO: testing
+    
     __tablename__ = "positions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)

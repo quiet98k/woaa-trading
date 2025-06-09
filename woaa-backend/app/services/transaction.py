@@ -22,6 +22,9 @@ def create_transaction(db: Session, tx_data: TransactionCreate) -> Transaction:
     Returns:
         Transaction: Created transaction instance.
     """
+    
+    #TODO: testing
+    
     transaction = Transaction(**tx_data.model_dump())
     db.add(transaction)
     db.commit()
@@ -40,6 +43,9 @@ def get_transaction_by_id(db: Session, tx_id: UUID) -> Transaction | None:
     Returns:
         Transaction or None.
     """
+    
+    #TODO: testing
+    
     return db.query(Transaction).filter(Transaction.id == tx_id).first()
 
 
@@ -54,6 +60,9 @@ def get_user_transactions(db: Session, user_id: UUID) -> list[Transaction]:
     Returns:
         List of transactions.
     """
+    
+    #TODO: testing
+    
     return db.query(Transaction).filter(Transaction.user_id == user_id).order_by(Transaction.timestamp.desc()).all()
 
 
@@ -72,6 +81,9 @@ def update_transaction(db: Session, tx_id: UUID, updates: TransactionUpdate) -> 
     Raises:
         HTTPException if transaction not found.
     """
+    
+    #TODO: testing
+    
     tx = get_transaction_by_id(db, tx_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -95,6 +107,9 @@ def delete_transaction(db: Session, tx_id: UUID) -> None:
     Raises:
         HTTPException if not found.
     """
+    
+    #TODO: testing
+    
     tx = get_transaction_by_id(db, tx_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")

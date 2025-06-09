@@ -24,4 +24,8 @@ def read_users_me(current_user: User = Depends(get_current_user)):
     Returns:
         UserOut: The current user's profile data.
     """
+    
+    #TODO: loging
+    #TODO: testing
+    
     return current_user

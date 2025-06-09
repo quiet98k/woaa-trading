@@ -22,6 +22,9 @@ def create_position(db: Session, position: PositionCreate) -> Position:
     Returns:
         The created Position object.
     """
+    
+    #TODO: testing
+    
     db_position = Position(**position.model_dump())
     db.add(db_position)
     db.commit()
@@ -39,6 +42,9 @@ def get_positions(db: Session) -> list[Position]:
     Returns:
         List of all Position objects.
     """
+    
+    #TODO: testing
+    
     return db.query(Position).all()
 
 
@@ -53,6 +59,9 @@ def get_position_by_id(db: Session, position_id: UUID) -> Position | None:
     Returns:
         The Position object if found, else None.
     """
+    
+    #TODO: testing
+    
     return db.query(Position).filter(Position.id == position_id).first()
 
 
@@ -71,6 +80,9 @@ def update_position(db: Session, position_id: UUID, updates: PositionUpdate) -> 
     Raises:
         HTTPException: If position not found.
     """
+    
+    #TODO: testing
+    
     db_position = get_position_by_id(db, position_id)
     if not db_position:
         raise HTTPException(status_code=404, detail="Position not found")
@@ -94,6 +106,9 @@ def delete_position(db: Session, position_id: UUID) -> None:
     Raises:
         HTTPException: If position not found.
     """
+    
+    #TODO: testing
+    
     db_position = get_position_by_id(db, position_id)
     if not db_position:
         raise HTTPException(status_code=404, detail="Position not found")

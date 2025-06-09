@@ -33,6 +33,9 @@ def create_transaction(payload: TransactionCreate, db: Session = Depends(get_db)
     Returns:
         The created transaction.
     """
+    
+    #TODO: loging
+    
     return service.create_transaction(db, payload)
 
 
@@ -48,6 +51,9 @@ def get_user_transactions(user_id: UUID, db: Session = Depends(get_db)):
     Returns:
         List of TransactionOut.
     """
+    
+    #TODO: loging
+    
     return service.get_user_transactions(db, user_id)
 
 
@@ -62,6 +68,9 @@ def get_transaction(tx_id: UUID, db: Session = Depends(get_db)):
     Returns:
         The transaction.
     """
+    
+    #TODO: loging
+    
     tx = service.get_transaction_by_id(db, tx_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -80,6 +89,10 @@ def update_transaction(tx_id: UUID, updates: TransactionUpdate, db: Session = De
     Returns:
         Updated transaction.
     """
+    
+    #TODO: loging
+    #TODO: testing
+    
     return service.update_transaction(db, tx_id, updates)
 
 
@@ -91,5 +104,9 @@ def delete_transaction(tx_id: UUID, db: Session = Depends(get_db)):
     Args:
         tx_id: UUID of the transaction.
     """
+    
+    #TODO: loging
+    #TODO: testing
+    
     service.delete_transaction(db, tx_id)
     return {"detail": "Transaction deleted"}

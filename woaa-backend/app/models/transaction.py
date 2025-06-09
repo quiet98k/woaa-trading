@@ -40,6 +40,9 @@ class Transaction(Base):
         - commission_type: 'real' or 'sim'
         - notes: Optional notes
     """
+    
+    #TODO: testing
+    
     __tablename__ = "transactions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
