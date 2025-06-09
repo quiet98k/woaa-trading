@@ -81,7 +81,7 @@ def create_user_with_settings(db: Session, user: UserCreate) -> User:
     return new_user
 
 
-def create_admin_user(db: Session, admin: AdminCreate) -> User:
+def create_admin_user_with_settings(db: Session, admin: AdminCreate) -> User:
     """
     Create a new admin user.
 
@@ -109,4 +109,6 @@ def create_admin_user(db: Session, admin: AdminCreate) -> User:
     db.add(new_admin)
     db.commit()
     db.refresh(new_admin)
+    
+    create_default_user_setting(db, new_admin.id)
     return new_admin

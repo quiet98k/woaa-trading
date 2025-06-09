@@ -16,7 +16,7 @@ from app.models.user import User
 from app.auth import create_access_token, get_current_admin_user
 from app.services.user import (
     create_user_with_settings,
-    create_admin_user,
+    create_admin_user_with_settings,
 )
 from app.services.log import log_action
 
@@ -68,7 +68,7 @@ def register_admin(
         HTTPException: If username or email already exists.
     """
 
-    new_admin = create_admin_user(db, admin)
+    new_admin = create_admin_user_with_settings(db, admin)
 
     #TODO: loging
     #TODO: testing
