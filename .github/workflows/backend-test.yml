@@ -3,7 +3,7 @@ name: Backend Tests
 on:
   push:
     paths:
-      - "app/**"
+      - "woaa-backend/**"
       - ".github/workflows/backend-test.yml"
   pull_request:
 
