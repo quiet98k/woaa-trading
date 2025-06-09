@@ -10,7 +10,7 @@ from app.auth import get_current_user
 from app.schemas.user import UserOut
 from app.models.user import User
 
-router = APIRouter()
+router = APIRouter(prefix="/user", tags=["user"])
 
 
 @router.get("/me", response_model=UserOut)

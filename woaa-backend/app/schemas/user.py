@@ -28,6 +28,13 @@ class UserCreate(UserBase):
         password (str): The user's raw password (to be hashed before storing).
     """
     password: str
+    
+class AdminCreate(UserCreate):
+    """
+    Schema for registering an admin user.
+    Inherits from UserCreate, but enforces is_admin as True.
+    """
+    is_admin: bool = True
 
 
 class UserOut(UserBase):

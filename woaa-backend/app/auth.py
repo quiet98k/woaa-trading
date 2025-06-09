@@ -75,3 +75,23 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     if user is None:
         raise credentials_exception
     return user
+
+def get_current_admin_user(user=Depends(get_current_user)):
+    """
+    Verifies that the current user is an admin.
+
+    Args:
+        user (User): The currently authenticated user.
+
+    Returns:
+        User: The user instance if admin.
+
+    Raises:
+        HTTPException: If the user is not an admin.
+    """
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required",
+        )
+    return user

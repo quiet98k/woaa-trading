@@ -11,15 +11,17 @@ from dotenv import load_dotenv
 
 from app.database import engine, Base
 from app.api import auth
-from app.api import user, trade, admin  # Add more routers as needed
+from app.api import user, position   # Add more routers as needed
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Configuration values with fallbacks
-HOST = os.getenv("HOST", "127.0.0.1")
-PORT = int(os.getenv("PORT", 8000))
-FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:5173")
+# HOST = os.getenv("HOST", "127.0.0.1")
+# PORT = int(os.getenv("PORT", 8000))
+raw_origins = os.getenv("FRONTEND_ORIGIN", "")
+origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+
 
 
 @asynccontextmanager
@@ -49,7 +51,7 @@ app = FastAPI(
 # Enable CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,7 +74,8 @@ def read_root():
 
 
 # Register routers
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(user.router, prefix="/user", tags=["user"])
+app.include_router(auth.router)
+app.include_router(user.router)
+app.include_router(position.router)
 # app.include_router(trade.router, prefix="/trade", tags=["trade"])
 # app.include_router(admin.router, prefix="/admin", tags=["admin"])

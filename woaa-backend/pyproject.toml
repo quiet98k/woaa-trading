@@ -1,12 +1,12 @@
 [project]
 name = "woaa-backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "backend for woaa-trading"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "alpaca-py>=0.40.1",
-    "fastapi>=0.115.12",
+    "fastapi[standard]>=0.115.12",
     "jose>=1.0.0",
     "passlib>=1.7.4",
     "psycopg2-binary>=2.9.10",
