@@ -11,6 +11,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: woaa-backend
+
     services:
       postgres:
         image: postgres:15
