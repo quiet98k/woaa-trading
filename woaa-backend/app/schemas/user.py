@@ -7,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from uuid import UUID
 from datetime import datetime
 
-#TODO: testing
 
 class UserBase(BaseModel):
     """

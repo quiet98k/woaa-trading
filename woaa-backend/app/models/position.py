@@ -41,7 +41,6 @@ class Position(Base):
         - status: Position status (open or closed)
     """
     
-    #TODO: testing
     
     __tablename__ = "positions"
 

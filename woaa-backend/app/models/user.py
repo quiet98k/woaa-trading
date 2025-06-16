@@ -25,7 +25,6 @@ class User(Base):
         - created_at: Timestamp of account creation
     """
     
-    #TODO: testing
     
     __tablename__ = "users"
 
