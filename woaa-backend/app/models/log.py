@@ -23,7 +23,6 @@ class Log(Base):
         - timestamp: Time when the log entry was created
     """
     
-    #TODO: testing
     
     __tablename__ = "logs"
 

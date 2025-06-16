@@ -27,7 +27,6 @@ class UserSetting(Base):
         - updated_at: Timestamp of last update
     """
     
-    #TODO: testing
     
     __tablename__ = "user_settings"
 

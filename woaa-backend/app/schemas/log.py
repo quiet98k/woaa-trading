@@ -6,7 +6,6 @@ Supports serialization and validation of log data.
 from pydantic import BaseModel, UUID4, ConfigDict
 from datetime import datetime
 
-#TODO: testing
 
 
 class LogBase(BaseModel):
