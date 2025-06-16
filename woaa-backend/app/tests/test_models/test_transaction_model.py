@@ -68,3 +68,25 @@ def test_transaction_without_user_fails(db):
     db.add(tx)
     with pytest.raises(IntegrityError):
         db.commit()
+
+def test_update_transaction_notes(db):
+    user = create_transaction_user(db)
+
+    tx = Transaction(
+        user_id=user.id,
+        symbol="AMZN",
+        shares=2.0,
+        price=3300.0,
+        action=ActionType.BUY,
+        commission_charged=0.0,
+        commission_type=CommissionType.REAL,
+    )
+    db.add(tx)
+    db.commit()
+    db.refresh(tx)
+
+    tx.notes = "updated note"
+    db.commit()
+    db.refresh(tx)
+
+    assert tx.notes == "updated note"

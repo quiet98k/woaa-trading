@@ -85,3 +85,20 @@ def test_null_username_raises_error(db):
     db.add(user)
     with pytest.raises(IntegrityError):
         db.commit()
+
+def test_update_user_admin_status(db):
+    user = User(
+        id=uuid.uuid4(),
+        username="updatable",
+        email="updatable@example.com",
+        hashed_password="pass",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    user.is_admin = True
+    db.commit()
+    db.refresh(user)
+
+    assert user.is_admin is True

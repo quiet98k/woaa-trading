@@ -54,3 +54,17 @@ def test_log_with_missing_action_fails(db):
     db.add(log)
     with pytest.raises(IntegrityError):
         db.commit()
+
+def test_update_log_details(db):
+    user = create_log_user(db)
+
+    log = Log(user_id=user.id, action="login", details="old details")
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+
+    log.details = "new details"
+    db.commit()
+    db.refresh(log)
+
+    assert log.details == "new details"

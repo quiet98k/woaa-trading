@@ -60,3 +60,19 @@ def test_user_setting_without_user_fails(db):
     db.add(setting)
     with pytest.raises(IntegrityError):
         db.commit()
+
+def test_update_user_setting_commission_rate(db):
+    user = create_setting_user(db)
+
+    setting = UserSetting(user_id=user.id, commission_rate=0.001, commission_type=SettingType.REAL)
+    db.add(setting)
+    db.commit()
+    db.refresh(setting)
+
+    original_updated = setting.updated_at
+    setting.commission_rate = 0.002
+    db.commit()
+    db.refresh(setting)
+
+    assert setting.commission_rate == 0.002
+    assert setting.updated_at >= original_updated

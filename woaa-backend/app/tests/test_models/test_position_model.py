@@ -62,3 +62,28 @@ def test_position_with_null_required_fields(db):
     db.add(pos)
     with pytest.raises(IntegrityError):
         db.commit()
+
+def test_update_position_to_closed(db):
+    user = create_test_user(db)
+
+    pos = Position(
+        user_id=user.id,
+        symbol="TSLA",
+        position_type=PositionType.LONG,
+        open_price=100.0,
+        open_shares=5.0,
+    )
+    db.add(pos)
+    db.commit()
+    db.refresh(pos)
+
+    pos.close_price = 120.0
+    pos.close_shares = pos.open_shares
+    pos.status = PositionStatus.CLOSED
+    pos.realized_pl = (pos.close_price - pos.open_price) * pos.open_shares
+    db.commit()
+    db.refresh(pos)
+
+    assert pos.status == PositionStatus.CLOSED
+    assert pos.close_price == 120.0
+    assert pos.realized_pl == pytest.approx(100.0)
