@@ -6,7 +6,6 @@ from pydantic import BaseModel, UUID4, ConfigDict, Field
 from typing import Optional, Literal
 from datetime import datetime
 
-#TODO: testing
 
 class TransactionBase(BaseModel):
     """

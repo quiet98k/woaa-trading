@@ -41,7 +41,6 @@ class Transaction(Base):
         - notes: Optional notes
     """
     
-    #TODO: testing
     
     __tablename__ = "transactions"
 
