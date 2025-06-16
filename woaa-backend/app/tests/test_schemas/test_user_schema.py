@@ -15,27 +15,18 @@ def test_user_create_valid():
     )
     assert user.username == "test"
 
-def test_user_create_invalid_email():
-    """
-    Invalid email should raise error.
-    """
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"username": "bad", "email": "not-an-email", "password": "123456"},
+        # missing password field
+        {"username": "no-pass", "email": "no@pass.com"},
+    ],
+)
+def test_user_create_invalid_inputs(kwargs):
+    """Invalid combinations for ``UserCreate`` should raise errors."""
     with pytest.raises(ValidationError):
-        UserCreate(
-            username="bad",
-            email="not-an-email",
-            password="123456"
-        )
-
-def test_user_create_missing_password():
-    """
-    Missing password should raise error.
-    """
-    with pytest.raises(ValidationError):
-        UserCreate(
-            username="no-pass",
-            email="no@pass.com"
-            # no password
-        )
+        UserCreate(**kwargs)
 
 def test_admin_create_defaults_to_true():
     """
