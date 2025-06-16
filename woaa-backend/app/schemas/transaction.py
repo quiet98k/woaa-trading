@@ -2,7 +2,7 @@
 Pydantic schemas for validating and serializing Transaction data.
 """
 
-from pydantic import BaseModel, UUID4, Field
+from pydantic import BaseModel, UUID4, ConfigDict, Field
 from typing import Optional, Literal
 from datetime import datetime
 
@@ -46,5 +46,5 @@ class TransactionOut(TransactionBase):
     user_id: UUID4
     timestamp: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+

@@ -3,7 +3,7 @@ Pydantic schemas for Logs.
 Supports serialization and validation of log data.
 """
 
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 from datetime import datetime
 
 #TODO: testing
@@ -32,5 +32,5 @@ class LogOut(LogBase):
     user_id: UUID4
     timestamp: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+

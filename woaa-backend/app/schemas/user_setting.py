@@ -3,7 +3,7 @@ Pydantic schemas for user settings.
 Used to validate and serialize settings data.
 """
 
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, ConfigDict
 from typing import Literal
 from datetime import datetime
 
@@ -46,5 +46,5 @@ class UserSettingOut(UserSettingBase):
     user_id: UUID4
     updated_at: datetime
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+

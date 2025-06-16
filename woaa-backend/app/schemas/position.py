@@ -2,7 +2,7 @@
 Pydantic schemas for Position model used in request and response validation.
 """
 
-from pydantic import BaseModel, UUID4, Field
+from pydantic import BaseModel, UUID4, ConfigDict, Field
 from typing import Optional, Literal
 from datetime import datetime
 
@@ -49,8 +49,8 @@ class PositionInDB(PositionBase):
     realized_pl: float
     status: Literal["open", "closed"]
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 
 class PositionOut(PositionInDB):

@@ -3,7 +3,7 @@ Pydantic schemas for user creation, shared fields, and API responses.
 Supports request validation and response serialization with ORM mode enabled.
 """
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 from uuid import UUID
 from datetime import datetime
 
@@ -55,5 +55,5 @@ class UserOut(UserBase):
     is_admin: bool
     created_at: datetime
 
-    class Config:
-        orm_mode = True  # Enables compatibility with ORM objects like SQLAlchemy
+    model_config = ConfigDict(from_attributes=True)
+
