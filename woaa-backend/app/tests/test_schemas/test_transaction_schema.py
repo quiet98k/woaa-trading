@@ -22,29 +22,26 @@ def test_valid_transaction_create():
     assert tx.action == "buy"
     assert tx.commission_type == "real"
 
-def test_invalid_action_type():
+@pytest.mark.parametrize(
+    "invalid_fields",
+    [
+        {"action": "hold"},
+        {"commission_type": "invalid"},
+    ],
+)
+def test_transaction_create_invalid_inputs(invalid_fields):
+    base_kwargs = {
+        "user_id": uuid4(),
+        "symbol": "AAPL",
+        "shares": 10.0,
+        "price": 170.0,
+        "action": "buy",
+        "commission_charged": 2.0,
+        "commission_type": "real",
+    }
+    base_kwargs.update(invalid_fields)
     with pytest.raises(ValidationError):
-        TransactionCreate(
-            user_id=uuid4(),
-            symbol="AAPL",
-            shares=10.0,
-            price=170.0,
-            action="hold",  # invalid
-            commission_charged=2.0,
-            commission_type="real"
-        )
-
-def test_invalid_commission_type():
-    with pytest.raises(ValidationError):
-        TransactionCreate(
-            user_id=uuid4(),
-            symbol="AAPL",
-            shares=10.0,
-            price=170.0,
-            action="buy",
-            commission_charged=2.0,
-            commission_type="invalid"  # invalid
-        )
+        TransactionCreate(**base_kwargs)
 
 def test_transaction_update_only_notes():
     tx_update = TransactionUpdate(notes="updated note")
