@@ -18,7 +18,7 @@ const LoginPage = () => {
     try {
       const data = await login(email, password);
       setToken(data.access_token);
-      navigate("/profile");
+      navigate("/dashboard");
     } catch {
       alert("Login failed");
     }

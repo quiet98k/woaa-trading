@@ -56,3 +56,32 @@ export async function register(
   if (!res.ok) throw new Error("Registration failed");
   return res.json();
 }
+
+/**
+ * Registers a new admin by sending their details to the backend API.
+ *
+ * @param username - The desired username for the new admin.
+ * @param email - The admin's email address.
+ * @param password - The admin's chosen password.
+ * @returns A promise that resolves to the JSON response containing admin registration details.
+ * @throws Will throw an error if the registration request fails.
+ */
+export async function registerAdmin(
+  username: string,
+  email: string,
+  password: string
+): Promise<any> {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${BASE_URL}/auth/register-admin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ username, email, password, is_admin: true }),
+  });
+
+  if (!res.ok) throw new Error("Admin registration failed");
+  return res.json();
+}
