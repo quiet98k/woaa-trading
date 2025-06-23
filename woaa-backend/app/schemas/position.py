@@ -17,10 +17,8 @@ class PositionBase(BaseModel):
 
 
 class PositionCreate(PositionBase):
-    """
-    Schema for creating a new position.
-    """
-    user_id: UUID4
+    """No user_id field required — it’s inferred from the token."""
+    pass
 
 
 class PositionUpdate(BaseModel):

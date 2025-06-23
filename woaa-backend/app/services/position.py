@@ -11,25 +11,21 @@ from app.models.position import Position
 from app.schemas.position import PositionCreate, PositionUpdate
 
 
-def create_position(db: Session, position: PositionCreate) -> Position:
+def create_position(db: Session, user_id: UUID, position: PositionCreate) -> Position:
     """
-    Create and save a new Position.
-
-    Args:
-        db: SQLAlchemy session.
-        position: Data to create the Position.
-
-    Returns:
-        The created Position object.
+    Create and save a new Position for a given user.
     """
-    
-    #TODO: testing
-    
-    db_position = Position(**position.model_dump())
+    db_position = Position(**position.model_dump(), user_id=user_id)
     db.add(db_position)
     db.commit()
     db.refresh(db_position)
     return db_position
+
+def get_positions_by_user(db: Session, user_id: UUID) -> list[Position]:
+    """
+    Retrieve all positions for a given user.
+    """
+    return db.query(Position).filter(Position.user_id == user_id).all()
 
 
 def get_positions(db: Session) -> list[Position]:
