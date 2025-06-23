@@ -11,21 +11,19 @@ from app.models.transaction import Transaction
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 
 
-def create_transaction(db: Session, tx_data: TransactionCreate) -> Transaction:
+def create_transaction(db: Session, tx_data: TransactionCreate, user_id: UUID) -> Transaction:
     """
     Create and store a new transaction.
 
     Args:
         db: Database session.
         tx_data: TransactionCreate schema.
+        user_id: Authenticated user's UUID.
 
     Returns:
         Transaction: Created transaction instance.
     """
-    
-    #TODO: testing
-    
-    transaction = Transaction(**tx_data.model_dump())
+    transaction = Transaction(**tx_data.model_dump(), user_id=user_id)
     db.add(transaction)
     db.commit()
     db.refresh(transaction)

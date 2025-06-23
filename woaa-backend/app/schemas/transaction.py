@@ -23,11 +23,10 @@ class TransactionBase(BaseModel):
 class TransactionCreate(TransactionBase):
     """
     Schema for creating a new transaction.
-
-    Attributes:
-        user_id: UUID of the user making the transaction.
+    User ID will be set from authentication context.
     """
-    user_id: UUID4
+    pass  # user_id is no longer accepted from the client
+
 
 
 class TransactionUpdate(BaseModel):

@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from app.database import engine, Base
 from app.api import auth
-from app.api import user, position, user_setting   # Add more routers as needed
+from app.api import user, position, user_setting, transaction   # Add more routers as needed
 
 # Load environment variables from .env file
 load_dotenv()
@@ -78,5 +78,5 @@ app.include_router(auth.router)
 app.include_router(user.router)
 app.include_router(position.router)
 app.include_router(user_setting.router)
-# app.include_router(trade.router, prefix="/trade", tags=["trade"])
+app.include_router(transaction.router)
 # app.include_router(admin.router, prefix="/admin", tags=["admin"])
