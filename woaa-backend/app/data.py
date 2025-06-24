@@ -17,10 +17,10 @@ HEADERS = {
 }
 
 params = {
-    "symbols": "AAPL",
+    "symbols": "TSLA",
     "timeframe": "1T",
-    "start": "2020-01-01T01:00:00Z",
-    "end": "2020-01-01T02:01:00Z",
+    "start": "2024-01-03T00:00:00Z",
+    "end": "2024-01-04T00:00:00Z",
     "limit": 10000
 }
 
