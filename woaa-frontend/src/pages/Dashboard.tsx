@@ -4,24 +4,19 @@
  */
 
 import Chart from "../components/chart";
-import { useEffect, useState } from "react";
-import { getMe } from "../api/user";
+import { useState } from "react";
+import { useMe } from "../hooks/useUser";
 import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
-
-interface UserProfile {
-  id: string;
-  username: string;
-  email: string;
-  real_balance: number;
-  sim_balance: number;
-  is_admin: boolean;
-}
+import { useMyPositions } from "../hooks/usePositions";
 
 export default function Dashboard() {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
+  // ✅ Fetch authenticated user using React Query
+  const { data: user, isLoading, isError } = useMe();
+
+  const { data: positions, isLoading: positionsLoading } = useMyPositions();
 
   const [commissionValue, setCommissionValue] = useState(0.5);
   const [commissionType, setCommissionType] = useState<"real" | "sim">("sim");
@@ -42,20 +37,24 @@ export default function Dashboard() {
   const [gainThreshold, setGainThreshold] = useState(20);
   const [drawdownThreshold, setDrawdownThreshold] = useState(10);
 
-  useEffect(() => {
-    getMe()
-      .then((data) => {
-        setUser(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        alert("Session expired. Please log in again.");
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) return <div>Loading...</div>;
-  if (!user) return <div>Not logged in.</div>;
+  // ✅ Handle loading and error states
+  if (isLoading) return <div>Loading...</div>;
+  if (isError || !user) {
+    return (
+      <div className="text-red-500 p-4">
+        Session expired or failed to load user.{" "}
+        <button
+          onClick={() => {
+            logout();
+            navigate("/login");
+          }}
+          className="underline text-blue-600"
+        >
+          Re-login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full space-y-2 bg-gray-100 p-2">
@@ -122,7 +121,42 @@ export default function Dashboard() {
             </div>
             {/* Stock Table */}
             <div className="w-[40%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center">
-              <p className="text-gray-500 text-sm">[Stock Table Placeholder]</p>
+              {positionsLoading ? (
+                <p className="text-gray-500 text-sm">Loading positions...</p>
+              ) : positions && positions.length > 0 ? (
+                <table className="w-full text-xs text-gray-700">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="px-1 py-1">Symbol</th>
+                      <th className="px-1 py-1">Type</th>
+                      <th className="px-1 py-1">Open Price</th>
+                      <th className="px-1 py-1">Shares</th>
+                      <th className="px-1 py-1">Status</th>
+                      <th className="px-1 py-1">P&L</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {positions.map((p) => (
+                      <tr key={p.id} className="border-b">
+                        <td className="px-1 py-1">{p.symbol}</td>
+                        <td className="px-1 py-1">{p.position_type}</td>
+                        <td className="px-1 py-1">
+                          ${p.open_price.toFixed(2)}
+                        </td>
+                        <td className="px-1 py-1">{p.open_shares}</td>
+                        <td className="px-1 py-1">{p.status}</td>
+                        <td className="px-1 py-1">
+                          {p.status === "closed"
+                            ? `$${p.realized_pl.toFixed(2)}`
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-gray-500 text-sm">No positions found.</p>
+              )}
             </div>
           </div>
         </div>
