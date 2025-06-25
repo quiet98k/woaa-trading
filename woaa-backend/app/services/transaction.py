@@ -8,12 +8,13 @@ from uuid import UUID
 from fastapi import HTTPException
 
 from app.models.transaction import Transaction
+from app.models.user import User
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 
 
 def create_transaction(db: Session, tx_data: TransactionCreate, user_id: UUID) -> Transaction:
     """
-    Create and store a new transaction.
+    Create and store a new transaction after validating simulated funds.
 
     Args:
         db: Database session.
@@ -22,12 +23,35 @@ def create_transaction(db: Session, tx_data: TransactionCreate, user_id: UUID) -
 
     Returns:
         Transaction: Created transaction instance.
+
+    Raises:
+        HTTPException: If user is not found or has insufficient simulated balance.
     """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    total_cost = tx_data.price * tx_data.shares
+
+    if tx_data.action in {"buy", "cover"}:
+        if user.sim_balance < total_cost:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient simulated funds: need ${total_cost:.2f}, have ${user.sim_balance:.2f}"
+            )
+        user.sim_balance -= total_cost
+        db.add(user)
+
     transaction = Transaction(**tx_data.model_dump(), user_id=user_id)
     db.add(transaction)
     db.commit()
+
+    # Refresh to reflect updated balance and transaction state
     db.refresh(transaction)
+    db.refresh(user)  # <- this is what you're referring to
+
     return transaction
+
 
 
 def get_transaction_by_id(db: Session, tx_id: UUID) -> Transaction | None:
