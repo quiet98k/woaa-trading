@@ -33,21 +33,8 @@ async def websocket_historical_data(websocket: WebSocket):
         query_data = json.loads(query_str)
         query = HistoricalBarsQuery(**query_data)
 
-        result = await fetch_all_historical_bars(query) 
-        transformed = []
-        for symbol, bars in result["bars"].items():
-            transformed.append({
-                "name": symbol,
-                "data": [
-                    {
-                        "x": bar["t"],
-                        "y": [bar["o"], bar["h"], bar["l"], bar["c"]]
-                    }
-                    for bar in bars
-                ]
-            })
-
-        await websocket.send_text(json.dumps(transformed))
+        result = fetch_all_historical_bars(query)
+        await websocket.send_text(json.dumps(result))
 
     except WebSocketDisconnect:
         print("WebSocket disconnected")
