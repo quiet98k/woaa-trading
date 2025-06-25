@@ -52,6 +52,10 @@ export function useStockSocket(query: HistoricalBarsQuery) {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    console.log("[HOOK] useStockSocket triggered with query:", query);
+  }, [query]);
+
+  useEffect(() => {
     const ws = new WebSocket("ws://localhost:8000/ws/data/historical");
     socketRef.current = ws;
 
@@ -101,7 +105,7 @@ export function useStockSocket(query: HistoricalBarsQuery) {
       }
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [query]);
+  }, [query.symbols, query.timeframe, query.start, query.end]);
 
   return { data, loading };
 }

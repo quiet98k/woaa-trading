@@ -117,6 +117,22 @@ export default function Chart(): JSX.Element {
   }, [data]);
 
   useEffect(() => {
+    console.log("[DEBUG] symbol changed:", symbol);
+  }, [symbol]);
+
+  useEffect(() => {
+    console.log("[DEBUG] interval changed:", interval);
+  }, [interval]);
+
+  useEffect(() => {
+    console.log("[DEBUG] startISO changed:", startISO);
+  }, [startISO]);
+
+  useEffect(() => {
+    console.log("[DEBUG] endISO changed:", endISO);
+  }, [endISO]);
+
+  useEffect(() => {
     if (!chartRef.current || !seriesRef.current || !containerRef.current)
       return;
 
