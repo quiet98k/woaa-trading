@@ -1,4 +1,11 @@
-import React, { useEffect, useRef, useState, type JSX } from "react";
+/**
+ * @fileoverview
+ * Candlestick Chart Component using TradingView Lightweight Charts.
+ * Includes company selector dropdown, timeframe/interval controls,
+ * and WebSocket integration for real-time historical bar data.
+ */
+
+import React, { useEffect, useRef, useState, useMemo, type JSX } from "react";
 import {
   createChart,
   CandlestickSeries,
@@ -8,7 +15,6 @@ import {
 } from "lightweight-charts";
 import { useStockSocket } from "../hooks/useStockSocket";
 import { formatISO, addDays, addMonths } from "date-fns";
-import debounce from "lodash.debounce"; // npm install lodash.debounce
 
 const DEFAULT_SYMBOL = "AAPL";
 const TIME_OPTIONS = ["1D/1Min", "5D/5Min", "1M/1D", "1Y/1M"] as const;
@@ -40,14 +46,40 @@ export default function Chart(): JSX.Element {
   const [visibleStart, setVisibleStart] = useState("2024-01-01");
   const [visibleEnd, setVisibleEnd] = useState("2024-02-01");
 
-  const [_, interval] = TIMEFRAME_INTERVAL_MAP[range];
+  const [startISO, setStartISO] = useState<string>("");
+  const [endISO, setEndISO] = useState<string>("");
 
-  const { data } = useStockSocket({
-    symbols: symbol,
-    timeframe: interval,
-    start: visibleStart,
-    end: visibleEnd,
-  });
+  const [timeframe, interval] = useMemo(
+    () => TIMEFRAME_INTERVAL_MAP[range],
+    [range]
+  );
+
+  // Compute start and end ISO whenever range changes
+  useEffect(() => {
+    const offset = END_OFFSET_MAP[range];
+    const end = new Date("2024-12-31");
+
+    const start = offset.days
+      ? addDays(end, -offset.days)
+      : addMonths(end, -(offset.months || 1));
+
+    console.log("startDay:", start);
+
+    setStartISO(formatISO(start, { representation: "date" }));
+    setEndISO(formatISO(end, { representation: "date" }));
+  }, [range]);
+
+  const query = useMemo(
+    () => ({
+      symbols: symbol,
+      timeframe: interval,
+      start: startISO,
+      end: endISO,
+    }),
+    [symbol, interval, startISO, endISO]
+  );
+
+  const { data, loading } = useStockSocket(query);
 
   useEffect(() => {
     if (containerRef.current && !chartRef.current) {
@@ -85,49 +117,130 @@ export default function Chart(): JSX.Element {
   }, [data]);
 
   useEffect(() => {
-    if (!chartRef.current) return;
+    if (!chartRef.current || !seriesRef.current || !containerRef.current)
+      return;
 
-    const timeScale = chartRef.current.timeScale();
+    const container = containerRef.current;
 
-    const handleVisibleRangeChange = debounce(() => {
-      const visibleLogicalRange = chartRef.current
-        ?.timeScale()
-        .getVisibleLogicalRange();
-      if (!visibleLogicalRange || !seriesRef.current) return;
+    const toolTip = document.createElement("div");
+    toolTip.style = `
+      position: absolute;
+      display: none;
+      z-index: 1000;
+      padding: 8px;
+      box-sizing: border-box;
+      font-size: 12px;
+      text-align: left;
+      width: 140px;
+      height: auto;
+      background: white;
+      border: 1px solid rgba(38, 166, 154, 1);
+      border-radius: 4px;
+      pointer-events: none;
+      font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
+      color: black;
+    `;
+    container.appendChild(toolTip);
 
-      const fromIndex = Math.floor(visibleLogicalRange.from);
-      const toIndex = Math.ceil(visibleLogicalRange.to);
+    const TOOLTIP_WIDTH = 140;
+    const TOOLTIP_HEIGHT = 100;
 
-      const fromBar = seriesRef.current.dataByIndex(fromIndex, 0);
-      const toBar = seriesRef.current.dataByIndex(toIndex, 0);
-
-      if (fromBar && toBar) {
-        const newStart = new Date(fromBar.time * 1000);
-        const newEnd = new Date(toBar.time * 1000);
-
-        const startISO = formatISO(newStart, { representation: "date" });
-        const endISO = formatISO(newEnd, { representation: "date" });
-
-        // Only update if date boundaries actually changed
-        if (startISO !== visibleStart || endISO !== visibleEnd) {
-          console.log(
-            "[Chart] Visible range changed. Fetching:",
-            startISO,
-            "→",
-            endISO
-          );
-          setVisibleStart(startISO);
-          setVisibleEnd(endISO);
-        }
+    const moveHandler = (param: any) => {
+      if (
+        !param.point ||
+        !param.time ||
+        param.point.x < 0 ||
+        param.point.x > container.clientWidth ||
+        param.point.y < 0 ||
+        param.point.y > container.clientHeight
+      ) {
+        toolTip.style.display = "none";
+        return;
       }
-    }, 1000);
 
-    timeScale.subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+      const data = param.seriesData.get(seriesRef.current);
+      if (!data) {
+        toolTip.style.display = "none";
+        return;
+      }
+
+      const { open, high, low, close } = data;
+
+      toolTip.innerHTML = `
+        <div><strong>${symbol}</strong></div>
+        <div>O: ${open}</div>
+        <div>H: ${high}</div>
+        <div>L: ${low}</div>
+        <div>C: ${close}</div>
+        <div style="margin-top: 4px;">${new Date(
+          param.time * 1000
+        ).toLocaleString()}</div>
+      `;
+
+      const TOOLTIP_MARGIN_X = 8;
+      const TOOLTIP_MARGIN_Y = 8;
+
+      // Position tooltip near the cursor, bottom-right by default
+      let left = param.point.x + TOOLTIP_MARGIN_X;
+      let top = param.point.y + TOOLTIP_MARGIN_Y;
+
+      // Shift left if it overflows horizontally
+      if (left + toolTip.offsetWidth > container.clientWidth) {
+        left = param.point.x - TOOLTIP_MARGIN_X - toolTip.offsetWidth;
+      }
+
+      // Shift up if it overflows vertically
+      if (top + toolTip.offsetHeight > container.clientHeight) {
+        top = param.point.y - TOOLTIP_MARGIN_Y - toolTip.offsetHeight;
+      }
+
+      toolTip.style.left = `${left}px`;
+      toolTip.style.top = `${top}px`;
+
+      toolTip.style.display = "block";
+    };
+
+    chartRef.current.subscribeCrosshairMove(moveHandler);
 
     return () => {
-      handleVisibleRangeChange.cancel();
+      chartRef.current?.unsubscribeCrosshairMove(moveHandler);
+      container.removeChild(toolTip);
     };
-  }, [symbol, range]);
+  }, [symbol]);
+
+  // useEffect(() => {
+  //   if (!chartRef.current) return;
+
+  //   const timeScale = chartRef.current.timeScale();
+  //   let debounceTimeout: NodeJS.Timeout | null = null;
+
+  //   const handleVisibleRangeChange = (
+  //     range: { from: Time; to: Time } | null
+  //   ) => {
+  //     if (!range) return;
+
+  //     if (debounceTimeout) clearTimeout(debounceTimeout);
+
+  //     debounceTimeout = setTimeout(() => {
+  //       console.log("📗 Debounced Visible Range (raw):", range);
+
+  //       const fromISO = new Date((range.from as number) * 1000).toISOString();
+  //       const toISO = new Date((range.to as number) * 1000).toISOString();
+
+  //       console.log("📆 Fetching from", fromISO, "to", toISO);
+
+  //       setStartISO(fromISO);
+  //       setEndISO(toISO);
+  //     }, 300);
+  //   };
+
+  //   timeScale.subscribeVisibleTimeRangeChange(handleVisibleRangeChange);
+
+  //   return () => {
+  //     if (debounceTimeout) clearTimeout(debounceTimeout);
+  //     timeScale.unsubscribeVisibleTimeRangeChange(handleVisibleRangeChange);
+  //   };
+  // }, []);
 
   return (
     <div className="w-full">
