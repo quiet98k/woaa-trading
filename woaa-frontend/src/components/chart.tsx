@@ -34,9 +34,31 @@ const END_OFFSET_MAP: Record<TimeOption, { days?: number; months?: number }> = {
   "1Y/1M": { months: 12 },
 };
 
-const SYMBOLS = ["AAPL", "TSLA", "AMZN", "GOOG", "MSFT"];
+const SYMBOLS = [
+  "AAPL",
+  "GOOG",
+  "NVDA",
+  "COST",
+  "SPY",
+  "DIA",
+  "QQQ",
+  "LCID",
+  "VXX",
+];
 
-export default function Chart(): JSX.Element {
+export interface LatestBar {
+  time: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+}
+
+interface ChartProps {
+  onLatestBarUpdate?: (symbol: string, bar: LatestBar) => void;
+}
+
+export default function Chart({ onLatestBarUpdate }: ChartProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<any>(null);
@@ -117,20 +139,18 @@ export default function Chart(): JSX.Element {
   }, [data]);
 
   useEffect(() => {
-    console.log("[DEBUG] symbol changed:", symbol);
-  }, [symbol]);
+    if (data && seriesRef.current) {
+      seriesRef.current.setData(data);
+      chartRef.current?.timeScale().fitContent();
 
-  useEffect(() => {
-    console.log("[DEBUG] interval changed:", interval);
-  }, [interval]);
+      const latestBar = data[data.length - 1];
+      if (latestBar && onLatestBarUpdate) {
+        onLatestBarUpdate(symbol, latestBar);
+      }
+    }
+  }, [data, symbol, onLatestBarUpdate]);
+  
 
-  useEffect(() => {
-    console.log("[DEBUG] startISO changed:", startISO);
-  }, [startISO]);
-
-  useEffect(() => {
-    console.log("[DEBUG] endISO changed:", endISO);
-  }, [endISO]);
 
   useEffect(() => {
     if (!chartRef.current || !seriesRef.current || !containerRef.current)

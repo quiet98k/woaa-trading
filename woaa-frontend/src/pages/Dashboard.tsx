@@ -3,21 +3,23 @@
  * Includes simulated and real balances, a candlestick chart, user trade controls, and admin fee settings.
  */
 
-import Chart from "../components/Chart";
+import Chart, { type LatestBar } from "../components/chart";
 
 import { useState } from "react";
 import { useMe } from "../hooks/useUser";
 import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
-import { useMyPositions } from "../hooks/usePositions";
+import { PositionTable } from "../components/positionTable";
+import SharesInput from "../components/SharesInput";
 
 export default function Dashboard() {
   const navigate = useNavigate();
 
+  const [symbol, setSymbol] = useState("AAPL");
+  const [latestBar, setLatestBar] = useState<LatestBar | null>(null);
+
   // ✅ Fetch authenticated user using React Query
   const { data: user, isLoading, isError } = useMe();
-
-  const { data: positions, isLoading: positionsLoading } = useMyPositions();
 
   const [commissionValue, setCommissionValue] = useState(0.5);
   const [commissionType, setCommissionType] = useState<"real" | "sim">("sim");
@@ -117,48 +119,18 @@ export default function Dashboard() {
             {/* Stock Chart */}
             <div className="w-[60%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm">
               <div className="w-full h-[500px] text-black">
-                <Chart />
+                <Chart
+                  onLatestBarUpdate={(newSymbol, bar) => {
+                    setSymbol(newSymbol);
+                    setLatestBar(bar);
+                  }}
+                />
               </div>
             </div>
 
-            {/* Stock Table */}
+            {/* Position Table */}
             <div className="w-[40%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center">
-              {positionsLoading ? (
-                <p className="text-gray-500 text-sm">Loading positions...</p>
-              ) : positions && positions.length > 0 ? (
-                <table className="w-full text-xs text-gray-700">
-                  <thead>
-                    <tr className="border-b text-left">
-                      <th className="px-1 py-1">Symbol</th>
-                      <th className="px-1 py-1">Type</th>
-                      <th className="px-1 py-1">Open Price</th>
-                      <th className="px-1 py-1">Shares</th>
-                      <th className="px-1 py-1">Status</th>
-                      <th className="px-1 py-1">P&L</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {positions.map((p) => (
-                      <tr key={p.id} className="border-b">
-                        <td className="px-1 py-1">{p.symbol}</td>
-                        <td className="px-1 py-1">{p.position_type}</td>
-                        <td className="px-1 py-1">
-                          ${p.open_price.toFixed(2)}
-                        </td>
-                        <td className="px-1 py-1">{p.open_shares}</td>
-                        <td className="px-1 py-1">{p.status}</td>
-                        <td className="px-1 py-1">
-                          {p.status === "closed"
-                            ? `$${p.realized_pl.toFixed(2)}`
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p className="text-gray-500 text-sm">No positions found.</p>
-              )}
+              <PositionTable />
             </div>
           </div>
         </div>
@@ -167,51 +139,7 @@ export default function Dashboard() {
           <div className="flex h-full gap-1">
             {/* Action 1 */}
             <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-between gap-4">
-              {/* Left: Inputs */}
-              <div className="flex flex-col gap-2 w-2/3">
-                {/* Number of Shares */}
-                <div className="flex items-center gap-2">
-                  <label className="w-1/2 text-xs text-gray-500">
-                    Number of Shares
-                  </label>
-                  <input
-                    type="number"
-                    className="flex-1 border border-gray-300 text-black rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="10"
-                  />
-                </div>
-                {/* Stop Loss */}
-                <div className="flex items-center gap-2">
-                  <label className="w-1/2 text-xs text-gray-500">
-                    Stop Loss
-                  </label>
-                  <input
-                    type="number"
-                    className="flex-1 border border-gray-300 text-black rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="100.00"
-                  />
-                </div>
-                {/* Trailing Stop Loss */}
-                <div className="flex items-center gap-2">
-                  <label className="w-1/2 text-xs text-gray-500">
-                    Trailing Stop Loss
-                  </label>
-                  <input
-                    type="number"
-                    className="flex-1 border border-gray-300 text-black rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder="2.5"
-                  />
-                </div>
-              </div>
-              {/* Right: Buttons */}
-              <div className="flex flex-col gap-2 w-1/3 justify-between">
-                <button className="w-full bg-green-500 hover:bg-green-600 text-white text-xs py-1 rounded-md active:outline-none active:ring-0">
-                  Buy
-                </button>
-                <button className="w-full bg-red-500 hover:bg-red-600 text-white text-xs py-1 rounded-md active:outline-none active:ring-0">
-                  Sell
-                </button>
-              </div>
+              <SharesInput symbol={symbol} latestBar={latestBar} />
             </div>
 
             {/* Action 2 */}

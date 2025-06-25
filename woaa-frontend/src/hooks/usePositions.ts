@@ -62,10 +62,10 @@ export function useUpdatePosition(positionId: string) {
 /**
  * Hook to delete a specific position.
  */
-export function useDeletePosition(positionId: string) {
+export function useDeletePosition() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => deletePosition(positionId),
+    mutationFn: (positionId: string) => deletePosition(positionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["positions"] });
     },
