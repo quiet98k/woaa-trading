@@ -1,86 +1,107 @@
 /**
- * @fileoverview React hook for streaming candlestick data via WebSocket from FastAPI backend.
+ * @fileoverview
+ * React hook to connect to WebSocket and stream historical candlestick bar data.
+ * Converts bar data into Lightweight Charts-compatible CandlestickData format.
  */
 
 import { useEffect, useRef, useState } from "react";
+import { formatISO } from "date-fns";
 
-export interface CandlestickBar {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-}
-
-interface StockQuery {
+export interface HistoricalBarsQuery {
   symbols: string;
   timeframe: string;
   start: string;
   end: string;
 }
 
+interface RawBar {
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  t: string;
+  v: number;
+}
+
+interface BarResponse {
+  [symbol: string]: RawBar[];
+}
+
+export interface CandlestickData {
+  time: number; // UNIX seconds
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  color?: string;
+  borderColor?: string;
+  wickColor?: string;
+  customValues?: Record<string, unknown>;
+}
+
 /**
- * Custom hook to open a WebSocket connection to FastAPI and receive candlestick data.
+ * Custom React hook to connect to a stock WebSocket stream and receive historical bar data.
  *
- * @param params - Query parameters for historical bars.
- * @returns Candlestick data and loading state.
+ * @param query - WebSocket query parameters (symbols, timeframe, start, end).
+ * @returns An object containing parsed candlestick data and loading state.
  */
-export function useStockSocket(params: StockQuery) {
-  const [data, setData] = useState<CandlestickBar[]>([]);
+export function useStockSocket(query: HistoricalBarsQuery) {
+  const [data, setData] = useState<CandlestickData[]>([]);
   const [loading, setLoading] = useState(true);
   const socketRef = useRef<WebSocket | null>(null);
-
-  const baseHttp = import.meta.env.VITE_API_URL;
-  const wsProtocol = baseHttp.startsWith("https") ? "wss" : "ws";
-  const wsUrl = baseHttp.replace(/^http/, wsProtocol);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    console.log("[Socket] Connecting to:", `${wsUrl}/ws/data/historical`);
-    const ws = new WebSocket(`${wsUrl}/ws/data/historical`);
+    const ws = new WebSocket("ws://localhost:8000/ws/data/historical");
     socketRef.current = ws;
+
+    console.log("[Socket] Connecting to:", ws.url);
 
     ws.onopen = () => {
       console.log("[Socket] Opened.");
-      const message = JSON.stringify(params);
-      console.log("[Socket] Sending:", message);
-      ws.send(message);
+      ws.send(JSON.stringify(query));
     };
+
     ws.onmessage = (event) => {
       console.log("[Socket] Message received.");
       const payload = JSON.parse(event.data);
-      console.log("[Socket] Parsed payload:", payload);
+      const bars: BarResponse = payload.bars;
 
-      if (Array.isArray(payload)) {
-        setData(payload);
-      } else if (payload.bars && Array.isArray(payload.bars[params.symbols])) {
-        const transformed = payload.bars[params.symbols].map(
-          (bar: any, index: number) => ({
-            time: Math.floor(new Date(bar.t).getTime() / 1000),
-            open: bar.o,
-            high: bar.h,
-            low: bar.l,
-            close: bar.c,
-          })
-        );
-        setData(transformed);
-      }
+      const rawBars = bars[query.symbols] || [];
+      const transformed: CandlestickData[] = rawBars.map((bar) => {
+        const timestamp = Math.floor(new Date(bar.t).getTime() / 1000);
+        return {
+          time: timestamp,
+          open: bar.o,
+          high: bar.h,
+          low: bar.l,
+          close: bar.c,
+        };
+      });
 
+      console.log("[Socket] Parsed payload:", transformed);
+      setData(transformed);
       setLoading(false);
     };
 
-    ws.onerror = (err) => {
-      console.error("[Socket] WebSocket error:", err);
+    ws.onerror = (event) => {
+      console.error("[Socket] WebSocket error:", event);
     };
 
-    ws.onclose = (e) => {
-      console.warn("[Socket] Closed. Code:", e.code, "Reason:", e.reason);
+    ws.onclose = (event) => {
+      console.log(
+        `[Socket] Closed. Code: ${event.code} Reason: ${event.reason}`
+      );
     };
 
     return () => {
-      console.log("[Socket] Cleaning up connection.");
-      ws.close();
+      if (socketRef.current) {
+        console.log("[Socket] Cleaning up connection.");
+        socketRef.current.close();
+      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [JSON.stringify(params)]);
+  }, [query]);
 
   return { data, loading };
 }

@@ -1,28 +1,14 @@
-/**
- * @fileoverview
- * Candlestick Chart Component using TradingView Lightweight Charts.
- * Includes company selector dropdown, timeframe/interval controls,
- * and WebSocket integration for real-time historical bar data.
- */
-
 import React, { useEffect, useRef, useState, type JSX } from "react";
 import {
   createChart,
   CandlestickSeries,
   type IChartApi,
   type Time,
+  type LogicalRange,
 } from "lightweight-charts";
 import { useStockSocket } from "../hooks/useStockSocket";
 import { formatISO, addDays, addMonths } from "date-fns";
-
-/**
- * @typedef {Object} BarData
- * @property {number} open
- * @property {number} high
- * @property {number} low
- * @property {number} close
- * @property {number | string | Time} time
- */
+import debounce from "lodash.debounce"; // npm install lodash.debounce
 
 const DEFAULT_SYMBOL = "AAPL";
 const TIME_OPTIONS = ["1D/1Min", "5D/5Min", "1M/1D", "1Y/1M"] as const;
@@ -44,31 +30,23 @@ const END_OFFSET_MAP: Record<TimeOption, { days?: number; months?: number }> = {
 
 const SYMBOLS = ["AAPL", "TSLA", "AMZN", "GOOG", "MSFT"];
 
-/**
- * Candlestick Chart Component with Dropdowns and WebSocket Data.
- *
- * @returns {JSX.Element}
- */
 export default function Chart(): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<any>(null);
+
   const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
   const [range, setRange] = useState<TimeOption>("1M/1D");
+  const [visibleStart, setVisibleStart] = useState("2024-01-01");
+  const [visibleEnd, setVisibleEnd] = useState("2024-02-01");
 
   const [_, interval] = TIMEFRAME_INTERVAL_MAP[range];
-  const offset = END_OFFSET_MAP[range];
 
-  const start = new Date("2024-01-01");
-  const end = offset.days
-    ? addDays(start, offset.days)
-    : addMonths(start, offset.months || 1);
-
-  const { data, loading } = useStockSocket({
+  const { data } = useStockSocket({
     symbols: symbol,
     timeframe: interval,
-    start: formatISO(start, { representation: "date" }),
-    end: formatISO(end, { representation: "date" }),
+    start: visibleStart,
+    end: visibleEnd,
   });
 
   useEffect(() => {
@@ -100,10 +78,56 @@ export default function Chart(): JSX.Element {
 
   useEffect(() => {
     if (data && seriesRef.current) {
+      console.log("[Chart] Updating series data:", data);
       seriesRef.current.setData(data);
       chartRef.current?.timeScale().fitContent();
     }
   }, [data]);
+
+  useEffect(() => {
+    if (!chartRef.current) return;
+
+    const timeScale = chartRef.current.timeScale();
+
+    const handleVisibleRangeChange = debounce(() => {
+      const visibleLogicalRange = chartRef.current
+        ?.timeScale()
+        .getVisibleLogicalRange();
+      if (!visibleLogicalRange || !seriesRef.current) return;
+
+      const fromIndex = Math.floor(visibleLogicalRange.from);
+      const toIndex = Math.ceil(visibleLogicalRange.to);
+
+      const fromBar = seriesRef.current.dataByIndex(fromIndex, 0);
+      const toBar = seriesRef.current.dataByIndex(toIndex, 0);
+
+      if (fromBar && toBar) {
+        const newStart = new Date(fromBar.time * 1000);
+        const newEnd = new Date(toBar.time * 1000);
+
+        const startISO = formatISO(newStart, { representation: "date" });
+        const endISO = formatISO(newEnd, { representation: "date" });
+
+        // Only update if date boundaries actually changed
+        if (startISO !== visibleStart || endISO !== visibleEnd) {
+          console.log(
+            "[Chart] Visible range changed. Fetching:",
+            startISO,
+            "→",
+            endISO
+          );
+          setVisibleStart(startISO);
+          setVisibleEnd(endISO);
+        }
+      }
+    }, 1000);
+
+    timeScale.subscribeVisibleLogicalRangeChange(handleVisibleRangeChange);
+
+    return () => {
+      handleVisibleRangeChange.cancel();
+    };
+  }, [symbol, range]);
 
   return (
     <div className="w-full">
