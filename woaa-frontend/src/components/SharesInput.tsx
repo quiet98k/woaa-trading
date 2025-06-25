@@ -1,10 +1,12 @@
 /**
  * @fileoverview Input component for specifying number of shares to trade
  * for the current symbol, using the latest bar data from the chart.
+ * First creates a transaction, and then creates a position upon success.
  */
 
 import React, { useState, type JSX } from "react";
 import { useCreatePosition } from "../hooks/usePositions";
+import { useCreateTransaction } from "../hooks/useTransactions";
 
 export interface LatestBar {
   time: number;
@@ -20,7 +22,7 @@ interface SharesInputProps {
 }
 
 /**
- * Component for entering the number of shares to buy/sell for the selected stock.
+ * Component for entering the number of shares to buy/short for the selected stock.
  *
  * @param symbol - Current selected stock symbol.
  * @param latestBar - Latest candlestick bar data (open, high, low, close).
@@ -31,17 +33,35 @@ export default function SharesInput({
   latestBar,
 }: SharesInputProps): JSX.Element {
   const [shares, setShares] = useState<number>(1);
+  const createTransaction = useCreateTransaction();
   const createPosition = useCreatePosition();
 
   const handleTrade = (type: "Long" | "Short") => {
     if (!latestBar) return;
 
-    createPosition.mutate({
-      symbol,
-      position_type: type,
-      open_price: latestBar.open,
-      open_shares: shares,
-    });
+    // 1. Create transaction
+    createTransaction.mutate(
+      {
+        symbol,
+        shares,
+        price: latestBar.open,
+        action: type === "Long" ? "buy" : "short",
+        notes: "",
+        commission_charged: 0, // Assuming default for now
+        commission_type: "sim", // or "real" depending on session
+      },
+      {
+        onSuccess: () => {
+          // 2. If transaction succeeds, create position
+          createPosition.mutate({
+            symbol,
+            position_type: type,
+            open_price: latestBar.open,
+            open_shares: shares,
+          });
+        },
+      }
+    );
   };
 
   return (
@@ -49,6 +69,7 @@ export default function SharesInput({
       <p className="text-xs text-gray-600">
         {symbol} @ ${latestBar?.open.toFixed(2) ?? "—"}
       </p>
+
       {/* Number of Shares */}
       <div className="flex items-center gap-2">
         <label className="w-1/2 text-xs text-gray-500">Number of Shares</label>
@@ -62,7 +83,7 @@ export default function SharesInput({
         />
       </div>
 
-      {/* Buy/Sell Buttons */}
+      {/* Buy/Short Buttons */}
       <div className="flex gap-2">
         <button
           onClick={() => handleTrade("Long")}
@@ -76,7 +97,7 @@ export default function SharesInput({
           disabled={!latestBar}
           className="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs py-1 rounded-md disabled:opacity-50"
         >
-          Sell
+          Short
         </button>
       </div>
 

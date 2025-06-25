@@ -12,7 +12,7 @@ const BASE_URL = import.meta.env.VITE_API_URL;
  */
 export async function createTransaction(tx: any): Promise<any> {
   const token = localStorage.getItem("token");
-  const res = await fetch(`${BASE_URL}/transactions`, {
+  const response = await fetch(`${BASE_URL}/transactions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -20,8 +20,12 @@ export async function createTransaction(tx: any): Promise<any> {
     },
     body: JSON.stringify(tx),
   });
-  if (!res.ok) throw new Error("Failed to create transaction");
-  return res.json();
+  if (!response.ok) {
+    const errorBody = await response.json();
+    // Throw a richer error so React Query can catch it
+    throw new Error(errorBody.detail || "Failed to create transaction");
+  }
+  return response.json();
 }
 
 /**

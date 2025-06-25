@@ -5,8 +5,6 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { formatISO } from "date-fns";
-
 export interface HistoricalBarsQuery {
   symbols: string;
   timeframe: string;

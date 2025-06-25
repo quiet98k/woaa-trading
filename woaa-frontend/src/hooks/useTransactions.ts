@@ -24,6 +24,8 @@ export function useMyTransactions() {
 
 /**
  * Hook to fetch a single transaction by its ID (admin-only).
+ *
+ * @param txId - The ID of the transaction to fetch.
  */
 export function useTransactionById(txId: string) {
   return useQuery({
@@ -35,6 +37,8 @@ export function useTransactionById(txId: string) {
 
 /**
  * Hook to fetch all transactions for a user (admin-only).
+ *
+ * @param userId - The ID of the user whose transactions to fetch.
  */
 export function useTransactionsByUserId(userId: string) {
   return useQuery({
@@ -54,11 +58,16 @@ export function useCreateTransaction() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
     },
+    onError: (error) => {
+      console.error("Failed to create transaction:", error);
+    },
   });
 }
 
 /**
  * Hook to update a transaction.
+ *
+ * @param txId - The ID of the transaction to update.
  */
 export function useUpdateTransaction(txId: string) {
   const queryClient = useQueryClient();
@@ -68,11 +77,16 @@ export function useUpdateTransaction(txId: string) {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["transaction", txId] });
     },
+    onError: (error) => {
+      console.error(`Failed to update transaction ${txId}:`, error);
+    },
   });
 }
 
 /**
  * Hook to delete a transaction.
+ *
+ * @param txId - The ID of the transaction to delete.
  */
 export function useDeleteTransaction(txId: string) {
   const queryClient = useQueryClient();
@@ -80,6 +94,9 @@ export function useDeleteTransaction(txId: string) {
     mutationFn: () => deleteTransaction(txId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    },
+    onError: (error) => {
+      console.error(`Failed to delete transaction ${txId}:`, error);
     },
   });
 }
