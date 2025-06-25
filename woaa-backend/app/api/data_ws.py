@@ -33,7 +33,7 @@ async def websocket_historical_data(websocket: WebSocket):
         query_data = json.loads(query_str)
         query = HistoricalBarsQuery(**query_data)
 
-        result = fetch_all_historical_bars(query)
+        result = await fetch_all_historical_bars(query)
         await websocket.send_text(json.dumps(result))
 
     except WebSocketDisconnect:

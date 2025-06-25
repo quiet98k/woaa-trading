@@ -4,6 +4,7 @@
  */
 
 import Chart from "../components/Chart";
+
 import { useState } from "react";
 import { useMe } from "../hooks/useUser";
 import { logout } from "../api/auth";
@@ -12,7 +13,6 @@ import { useMyPositions } from "../hooks/usePositions";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-
 
   // ✅ Fetch authenticated user using React Query
   const { data: user, isLoading, isError } = useMe();
@@ -115,11 +115,12 @@ export default function Dashboard() {
         <div className="flex-[6] border border-green-400 p-2 rounded-md">
           <div className="flex h-full gap-2">
             {/* Stock Chart */}
-            <div className="w-[60%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center">
-              <div className="w-full h-full border border-amber-700 text-black">
+            <div className="w-[60%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm">
+              <div className="w-full h-[500px] text-black">
                 <Chart />
               </div>
             </div>
+
             {/* Stock Table */}
             <div className="w-[40%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center">
               {positionsLoading ? (
