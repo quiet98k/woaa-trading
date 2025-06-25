@@ -6,7 +6,7 @@
 import Chart, { type LatestBar } from "../components/chart";
 
 import { useState } from "react";
-import { useMe } from "../hooks/useUser";
+import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 import { PositionTable } from "../components/positionTable";
@@ -20,6 +20,13 @@ export default function Dashboard() {
 
   // ✅ Fetch authenticated user using React Query
   const { data: user, isLoading, isError } = useMe();
+
+  const [isEditingSim, setIsEditingSim] = useState(false);
+  const [isEditingReal, setIsEditingReal] = useState(false);
+  const [newSimValue, setNewSimValue] = useState(user?.sim_balance || 0);
+  const [newRealValue, setNewRealValue] = useState(user?.real_balance || 0);
+
+  const updateUser = useUpdateUserBalances(user?.id ?? ""); // assumes user is loaded
 
   const [commissionValue, setCommissionValue] = useState(0.5);
   const [commissionType, setCommissionType] = useState<"real" | "sim">("sim");
@@ -98,18 +105,89 @@ export default function Dashboard() {
           {/* Balance Info */}
           <div className="flex justify-between items-center gap-2 h-full">
             {/* Simulated Value */}
-            <div className="flex-1 border border-green-300 bg-green-50 p-2 rounded-md shadow-sm flex items-center justify-between">
+            <div className="flex-1 border border-green-300 bg-green-50 p-2 rounded-md shadow-sm flex items-center justify-between gap-2">
               <span className="text-sm text-gray-600">Simulated Value</span>
-              <span className="text-lg font-semibold text-green-700">
-                ${user?.sim_balance?.toLocaleString() ?? "—"}
-              </span>
+              {isEditingSim ? (
+                <>
+                  <input
+                    type="number"
+                    className="w-24 px-2 py-1 text-sm text-black border rounded-md"
+                    value={newSimValue}
+                    onChange={(e) => setNewSimValue(parseFloat(e.target.value))}
+                  />
+                  <button
+                    className="text-green-700 font-bold"
+                    onClick={() => {
+                      updateUser.mutate({ sim_balance: newSimValue });
+                      setIsEditingSim(false);
+                    }}
+                  >
+                    ✅
+                  </button>
+                  <button
+                    className="text-red-500 font-bold"
+                    onClick={() => setIsEditingSim(false)}
+                  >
+                    ❌
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="text-lg font-semibold text-green-700">
+                    ${user?.sim_balance?.toLocaleString() ?? "—"}
+                  </span>
+                  <button
+                    className="text-sm text-green-600 underline"
+                    onClick={() => setIsEditingSim(true)}
+                  >
+                    Edit
+                  </button>
+                </>
+              )}
             </div>
+
             {/* Real Money */}
-            <div className="flex-1 border border-blue-300 bg-blue-50 p-2 rounded-md shadow-sm flex items-center justify-between">
+            <div className="flex-1 border border-blue-300 bg-blue-50 p-2 rounded-md shadow-sm flex items-center justify-between gap-2">
               <span className="text-sm text-gray-600">Real Money</span>
-              <span className="text-lg font-semibold text-blue-700">
-                ${user?.real_balance?.toLocaleString() ?? "—"}
-              </span>
+              {isEditingReal ? (
+                <>
+                  <input
+                    type="number"
+                    className="w-24 px-2 py-1 text-sm text-black border rounded-md"
+                    value={newRealValue}
+                    onChange={(e) =>
+                      setNewRealValue(parseFloat(e.target.value))
+                    }
+                  />
+                  <button
+                    className="text-blue-700 font-bold"
+                    onClick={() => {
+                      updateUser.mutate({ real_balance: newRealValue });
+                      setIsEditingReal(false);
+                    }}
+                  >
+                    ✅
+                  </button>
+                  <button
+                    className="text-red-500 font-bold"
+                    onClick={() => setIsEditingReal(false)}
+                  >
+                    ❌
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="text-lg font-semibold text-blue-700">
+                    ${user?.real_balance?.toLocaleString() ?? "—"}
+                  </span>
+                  <button
+                    className="text-sm text-blue-600 underline"
+                    onClick={() => setIsEditingReal(true)}
+                  >
+                    Edit
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>

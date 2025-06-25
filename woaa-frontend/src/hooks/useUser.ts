@@ -36,6 +36,7 @@ export function useUpdateUserBalances(userId: string) {
       updateUserBalances(userId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user", userId] });
+      queryClient.invalidateQueries({ queryKey: ["me"] });
     },
   });
 }

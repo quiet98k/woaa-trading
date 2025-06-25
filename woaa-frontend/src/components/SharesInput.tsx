@@ -7,6 +7,7 @@
 import React, { useState, type JSX } from "react";
 import { useCreatePosition } from "../hooks/usePositions";
 import { useCreateTransaction } from "../hooks/useTransactions";
+import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 
 export interface LatestBar {
   time: number;
@@ -35,29 +36,43 @@ export default function SharesInput({
   const [shares, setShares] = useState<number>(1);
   const createTransaction = useCreateTransaction();
   const createPosition = useCreatePosition();
+  const { data: user } = useMe(); // Ensure current user is loaded
+  const updateBalances = useUpdateUserBalances(user?.id ?? "");
 
   const handleTrade = (type: "Long" | "Short") => {
-    if (!latestBar) return;
+    if (!latestBar || !user) return;
 
-    // 1. Create transaction
+    const price = latestBar.open;
+    const cost = shares * price;
+
+    // 🚫 Check if user has enough simulated balance
+    if ((user.sim_balance ?? 0) < cost) {
+      alert("Insufficient simulated balance.");
+      return;
+    }
+
+    // ✅ Proceed with transaction
     createTransaction.mutate(
       {
         symbol,
         shares,
-        price: latestBar.open,
+        price,
         action: type === "Long" ? "buy" : "short",
         notes: "",
-        commission_charged: 0, // Assuming default for now
-        commission_type: "sim", // or "real" depending on session
+        commission_charged: 0,
+        commission_type: "sim", // this may still vary, but sim_balance is always affected
       },
       {
         onSuccess: () => {
-          // 2. If transaction succeeds, create position
           createPosition.mutate({
             symbol,
             position_type: type,
-            open_price: latestBar.open,
+            open_price: price,
             open_shares: shares,
+          });
+
+          updateBalances.mutate({
+            sim_balance: (user.sim_balance ?? 0) - cost,
           });
         },
       }
