@@ -29,6 +29,11 @@ class UserSettingBase(BaseModel):
 
     power_up_fee: float
     power_up_type: Literal["real", "sim"]
+    
+    start_time: datetime
+    speed: float
+    
+    sim_time: datetime
 
 
 class UserSettingUpdate(UserSettingBase):

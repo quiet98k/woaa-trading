@@ -2,6 +2,7 @@
 Main FastAPI application entry point. Sets up middleware, routers, root route, and initializes the database.
 """
 
+import asyncio
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +12,8 @@ from dotenv import load_dotenv
 
 from app.database import engine, Base
 from app.api import auth
-from app.api import user, position, user_setting, transaction, data, data_ws   # Add more routers as needed
+from app.services.sim_clock import update_all_users_sim_time
+from app.api import user, position, user_setting, transaction, data, data_ws, sim_ws   # Add more routers as needed
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,7 +30,7 @@ origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()
 async def lifespan(app: FastAPI):
     """
     Async context manager for FastAPI lifespan events.
-    Verifies DB connection and creates tables at startup.
+    Initializes DB and launches background sim clock task.
     """
     try:
         with engine.connect() as conn:
@@ -37,7 +39,18 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         print("❌ Failed to connect to DB:", e)
-    yield
+
+    # Start background task
+    task = asyncio.create_task(update_all_users_sim_time())
+    try:
+        yield
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            print("🛑 Background sim clock task cancelled.")
+
 
 
 # Initialize FastAPI app
@@ -81,5 +94,7 @@ app.include_router(user_setting.router)
 app.include_router(transaction.router)
 app.include_router(data.router)
 app.include_router(data_ws.router)
+app.include_router(sim_ws.router)
+
 
 # app.include_router(admin.router, prefix="/admin", tags=["admin"])

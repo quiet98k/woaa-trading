@@ -11,6 +11,7 @@ import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 import { PositionTable } from "../components/positionTable";
 import SharesInput from "../components/SharesInput";
+import SimulationControls from "../components/SimulationControls";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -196,7 +197,7 @@ export default function Dashboard() {
           <div className="flex h-full gap-2">
             {/* Stock Chart */}
             <div className="w-[60%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm">
-              <div className="w-full h-[500px] text-black">
+              <div className="w-full h-[500px]">
                 <Chart
                   onLatestBarUpdate={(newSymbol, bar) => {
                     setSymbol(newSymbol);
@@ -222,33 +223,11 @@ export default function Dashboard() {
 
             {/* Action 2 */}
             <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex flex-col justify-between text-xs gap-3">
-              {/* Speed Control */}
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-gray-600 w-1/2">Simulation Speed</label>
-                <select className="flex-1 bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                  {[1, 2, 3, 4, 5].map((speed) => (
-                    <option key={speed} value={speed}>
-                      {speed}x
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Start Date */}
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-gray-600 w-1/2">Start Date</label>
-                <input
-                  type="date"
-                  className="flex-1 bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-
-              {/* Pause Button */}
-              <div className="flex justify-end">
-                <button className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-xs focus:outline-none active:outline-none">
-                  Pause
-                </button>
-              </div>
+              <SimulationControls
+                onPause={() => console.log("Paused")}
+                onSpeedChange={(s) => console.log("Speed:", s)}
+                onDateChange={(d) => console.log("Date:", d)}
+              />
             </div>
 
             {/* Action 3 */}

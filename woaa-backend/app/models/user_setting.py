@@ -7,6 +7,7 @@ from sqlalchemy import Column, String, Float, Enum, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from enum import Enum as PyEnum
+from datetime import datetime
 
 from app.database import Base
 
@@ -49,5 +50,10 @@ class UserSetting(Base):
 
     power_up_fee = Column(Float, default=0.0)
     power_up_type = Column(Enum(SettingType), default=SettingType.SIM)
+    
+    start_time = Column(DateTime(timezone=True), nullable=False)
+    speed = Column(Float, default=1.0)
+    sim_time = Column(DateTime(timezone=True), nullable=False)
+
 
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
