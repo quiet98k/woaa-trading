@@ -197,7 +197,7 @@ export default function Dashboard() {
           <div className="flex h-full gap-2">
             {/* Stock Chart */}
             <div className="w-[60%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm">
-              <div className="w-full h-[500px]">
+              <div className="w-full h-[500px] text-black">
                 <Chart
                   onLatestBarUpdate={(newSymbol, bar) => {
                     setSymbol(newSymbol);

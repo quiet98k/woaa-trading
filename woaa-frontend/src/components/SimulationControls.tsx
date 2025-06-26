@@ -4,6 +4,7 @@
  */
 
 import React, { type JSX } from "react";
+import { useSimTimeSocket } from "../hooks/useSimTimeSocket";
 
 interface SimulationControlsProps {
   onPause: () => void;
@@ -24,8 +25,18 @@ export default function SimulationControls({
   onSpeedChange,
   onDateChange,
 }: SimulationControlsProps): JSX.Element {
+  const { simTime, loading } = useSimTimeSocket();
+
   return (
     <div className="flex flex-col gap-3">
+      {/* Sim Time Display */}
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-gray-600 w-1/2">Simulation Time</label>
+        <span className="flex-1 text-xs text-gray-800">
+          {loading ? "Loading..." : simTime ? new Date(simTime).toLocaleString() : "-"}
+        </span>
+      </div>
+
       {/* Speed Control */}
       <div className="flex items-center justify-between gap-2">
         <label className="text-gray-600 w-1/2">Simulation Speed</label>

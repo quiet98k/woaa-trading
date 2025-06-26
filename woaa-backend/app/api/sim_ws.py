@@ -1,14 +1,14 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter, Depends
 from uuid import UUID
 from app.services.sim_ws import sim_time_manager
-from app.auth import get_current_user
+from app.auth import get_current_user_ws
 from app.models.user import User
 
 router = APIRouter()
 
 
 @router.websocket("/ws/sim-time")
-async def sim_time_ws(websocket: WebSocket, user: User = Depends(get_current_user)):
+async def sim_time_ws(websocket: WebSocket, user: User = Depends(get_current_user_ws)):
     """
     WebSocket for pushing sim_time updates to the frontend.
     """

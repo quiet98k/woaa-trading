@@ -3,5 +3,9 @@
     "${workspaceFolder}/woaa-backend/app",
     "./woaa-backend"
   ],
-  "postman.settings.dotenv-detection-notification-visibility": false
+  "postman.settings.dotenv-detection-notification-visibility": false,
+  "cursorpyright.analysis.extraPaths": [
+    "${workspaceFolder}/woaa-backend/app",
+    "./woaa-backend"
+  ]
 }

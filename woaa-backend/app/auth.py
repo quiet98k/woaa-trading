@@ -95,3 +95,24 @@ def get_current_admin_user(user=Depends(get_current_user)):
             detail="Admin access required",
         )
     return user
+
+async def get_current_user_ws(websocket: WebSocket):
+    token = None
+    # You can get the token from the query params or headers
+    if "token" in websocket.query_params:
+        token = websocket.query_params["token"]
+    elif "authorization" in websocket.headers:
+        auth_header = websocket.headers["authorization"]
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:]
+    if not token:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        raise HTTPException(status_code=403, detail="Not authenticated")
+    try:
+        # decode and validate your JWT here
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        # ...fetch user from DB...
+        return user
+    except JWTError:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        raise HTTPException(status_code=403, detail="Invalid token")
