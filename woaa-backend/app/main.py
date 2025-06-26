@@ -3,6 +3,7 @@ Main FastAPI application entry point. Sets up middleware, routers, root route, a
 """
 
 import asyncio
+import logging
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,7 +14,7 @@ from typing import AsyncGenerator
 
 from app.database import sync_engine, Base
 from app.api import auth
-from app.api import user, position, user_setting, transaction, data, data_ws
+from app.api import user, position, user_setting, transaction, data, data_ws, simulation_ws
 from app.tasks.simulation import update_simulation_time   # Add more routers as needed
 
 # Load environment variables from .env file
@@ -25,7 +26,10 @@ load_dotenv()
 raw_origins = os.getenv("FRONTEND_ORIGIN", "")
 origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
-
+# logging.basicConfig(
+#     level=logging.DEBUG,  # or INFO
+#     format="%(levelname)s | %(asctime)s | %(message)s",
+# )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -98,6 +102,8 @@ app.include_router(user_setting.router)
 app.include_router(transaction.router)
 app.include_router(data.router)
 app.include_router(data_ws.router)
+app.include_router(simulation_ws.router)
+
 
 
 # app.include_router(admin.router, prefix="/admin", tags=["admin"])

@@ -7,6 +7,11 @@ import Chart, { type LatestBar } from "../components/chart";
 
 import { useState } from "react";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
+import {
+  useUpdatePause,
+  useUpdateSpeed,
+  useUpdateStartTime,
+} from "../hooks/useUserSettings";
 import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 import { PositionTable } from "../components/positionTable";
@@ -223,11 +228,7 @@ export default function Dashboard() {
 
             {/* Action 2 */}
             <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex flex-col justify-between text-xs gap-3">
-              <SimulationControls
-                onPause={() => console.log("Paused")}
-                onSpeedChange={(s) => console.log("Speed:", s)}
-                onDateChange={(d) => console.log("Date:", d)}
-              />
+              <SimulationControls />
             </div>
 
             {/* Action 3 */}

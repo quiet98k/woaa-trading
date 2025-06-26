@@ -1,49 +1,44 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-/**
- * Custom React hook to connect to the sim_time WebSocket and receive sim_time updates.
- *
- * @returns An object containing the latest sim_time (as ISO string) and loading state.
- */
-export function useSimTimeSocket() {
-  const [simTime, setSimTime] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const socketRef = useRef<WebSocket | null>(null);
+export function useSimTime(userId: string) {
+  const [simTime, setSimTime] = useState<Date | null>(null);
+  const [connected, setConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8000/ws/sim-time");
-    socketRef.current = ws;
+    if (!userId) return;
 
-    ws.onopen = () => {
-      setLoading(false);
-      // Optionally send a ping or auth if needed
+    const token = localStorage.getItem("token");
+    const socket = new WebSocket(
+      `ws://localhost:8000/ws/simulation/time?token=${token}`
+    );
+
+    socket.onopen = () => {
+      setConnected(true);
     };
 
-    ws.onmessage = (event) => {
+    socket.onmessage = (event) => {
       try {
-        const payload = JSON.parse(event.data);
-        if (payload.sim_time) {
-          setSimTime(payload.sim_time);
+        const data = JSON.parse(event.data);
+        if (data.sim_time) {
+          setSimTime(new Date(data.sim_time));
         }
-      } catch (e) {
-        console.error("[SimTimeSocket] Failed to parse message:", event.data);
+      } catch (error) {
+        console.error("Failed to parse sim_time message:", error);
       }
     };
 
-    ws.onerror = (event) => {
-      console.error("[SimTimeSocket] WebSocket error:", event);
+    socket.onclose = () => {
+      setConnected(false);
     };
 
-    ws.onclose = (event) => {
-      console.log(`[SimTimeSocket] Closed. Code: ${event.code} Reason: ${event.reason}`);
+    socket.onerror = (err) => {
+      console.error("WebSocket error:", err);
     };
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
+      socket.close();
     };
-  }, []);
+  }, [userId]);
 
-  return { simTime, loading };
-} 
+  return { simTime, connected };
+}

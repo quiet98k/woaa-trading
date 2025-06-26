@@ -3,17 +3,17 @@ Provides JWT-based authentication utilities including token creation and user re
 Uses environment variables to configure expiration time, secret key, and algorithm.
 """
 
+import logging
 import os
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, WebSocket, WebSocketException, status
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.database import get_db
 from app.models.user import User
+from app.database import async_session_maker, get_db
 
 # Load .env variables
 load_dotenv()
@@ -101,3 +101,31 @@ def get_current_admin_user(user=Depends(get_current_user)):
             detail="Admin access required",
         )
     return user
+
+async def get_current_user_ws(websocket: WebSocket) -> User:
+    token = websocket.query_params.get("token")
+    if not token:
+        logging.warning("❌ [WS Auth] No token found in query params")
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        logging.info(f"🔓 [WS Auth] Token decoded: {payload}")
+        user_id = payload.get("sub")
+        if not user_id:
+            logging.warning("❌ [WS Auth] No 'sub' claim in token")
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+    except JWTError as e:
+        logging.warning(f"❌ [WS Auth] JWT error: {e}")
+        raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+    async with async_session_maker() as session:
+        result = await session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            logging.warning(f"❌ [WS Auth] No user found for ID: {user_id}")
+            raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION)
+
+        logging.info(f"✅ [WS Auth] User authenticated: {user.username} ({user.id})")
+        return user
