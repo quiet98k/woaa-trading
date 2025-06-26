@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 
 from app.database import engine, Base
 from app.api import auth
-from app.services.sim_clock import update_all_users_sim_time
 from app.api import user, position, user_setting, transaction, data, data_ws, sim_ws   # Add more routers as needed
 
 # Load environment variables from .env file
@@ -40,16 +39,6 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print("❌ Failed to connect to DB:", e)
 
-    # Start background task
-    task = asyncio.create_task(update_all_users_sim_time())
-    try:
-        yield
-    finally:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            print("🛑 Background sim clock task cancelled.")
 
 
 
