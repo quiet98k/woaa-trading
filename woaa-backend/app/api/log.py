@@ -8,7 +8,7 @@ Endpoints:
 """
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from typing import List
 
@@ -23,56 +23,40 @@ router = APIRouter(prefix="/logs", tags=["logs"])
 
 
 @router.post("/", response_model=LogOut)
-def create_log_entry(log: LogCreate, db: Session = Depends(get_db)):
+async def create_log_entry(
+    log: LogCreate,
+    db: AsyncSession = Depends(get_db)
+):
     """
-    Create a new log entry.
-
-    Args:
-        log: LogCreate payload (user_id must be provided)
-        db: SQLAlchemy session
-
-    Returns:
-        LogOut: Created log entry
+    Create a new log entry (user_id must be provided).
     """
-    new_log = service.create_log(db, log)
-    log_action(db, log.user_id, "manual_log", f"Created log manually: {log.action}")
+    new_log = await service.create_log(db, log)
+    await log_action(db, log.user_id, "manual_log", f"Created log manually: {log.action}")
     return new_log
 
 
 @router.get("/me", response_model=List[LogOut])
-def get_own_logs(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def get_own_logs(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """
     Retrieve logs for the currently authenticated user.
-
-    Args:
-        db: SQLAlchemy session
-        current_user: Authenticated user
-
-    Returns:
-        List of LogOut
     """
-    logs = service.get_logs_by_user(db, current_user.id)
-    log_action(db, current_user.id, "view_logs", "User viewed their own logs.")
+    logs = await service.get_logs_by_user(db, current_user.id)
+    await log_action(db, current_user.id, "view_logs", "User viewed their own logs.")
     return logs
 
 
 @router.get("/{user_id}", response_model=List[LogOut])
-def get_logs_by_user_id(
+async def get_logs_by_user_id(
     user_id: UUID,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     admin_user: User = Depends(get_current_admin_user)
 ):
     """
     Admin-only: Get all logs for a specific user.
-
-    Args:
-        user_id: UUID of the user whose logs are requested
-        db: SQLAlchemy session
-        admin_user: Authenticated admin user
-
-    Returns:
-        List of LogOut
     """
-    logs = service.get_logs_by_user(db, user_id)
-    log_action(db, admin_user.id, "admin_view_logs", f"Viewed logs for user {user_id}")
+    logs = await service.get_logs_by_user(db, user_id)
+    await log_action(db, admin_user.id, "admin_view_logs", f"Viewed logs for user {user_id}")
     return logs

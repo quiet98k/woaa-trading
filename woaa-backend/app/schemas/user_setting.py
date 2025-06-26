@@ -32,6 +32,7 @@ class UserSettingBase(BaseModel):
     
     start_time: datetime
     speed: float
+    paused: bool | None = None
     
     sim_time: datetime
     last_updated: datetime

@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from app.models.user_setting import UserSetting
 from app.database import async_session_maker
 
-TICK_INTERVAL = 1  # seconds; the loop interval
+TICK_INTERVAL = 1  # seconds
 
 async def update_simulation_time():
     while True:
@@ -21,19 +21,13 @@ async def update_all_users_sim_time(session: AsyncSession):
     users = result.scalars().all()
 
     for user in users:
-        if user.speed <= 0:
-            continue  # paused
+        if user.paused or user.speed <= 0:
+            continue  # Skip updates if paused or speed is invalid
 
-        real_elapsed = (now - user.last_updated).total_seconds()
-        sim_minutes_to_add = int(real_elapsed * user.speed)
+        elapsed_real_seconds = (now - user.last_updated).total_seconds()
+        sim_time_delta = timedelta(seconds=elapsed_real_seconds * user.speed)
 
-        if sim_minutes_to_add <= 0:
-            continue
-
-        for _ in range(sim_minutes_to_add):
-            user.sim_time += timedelta(minutes=1)
-            await asyncio.sleep(0.1)  # slight delay to simulate smooth flow
-
+        user.sim_time += sim_time_delta
         user.last_updated = now
         session.add(user)
 

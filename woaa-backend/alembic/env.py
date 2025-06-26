@@ -5,7 +5,7 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from app.database import Base, DATABASE_URL
+from app.database import Base, SYNC_DATABASE_URL
 from sqlalchemy.engine import create_engine
 
 
@@ -57,7 +57,7 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online():
     connectable = create_engine(
-        DATABASE_URL,
+        SYNC_DATABASE_URL,
         poolclass=pool.NullPool,
     )
 

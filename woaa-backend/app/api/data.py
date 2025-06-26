@@ -10,7 +10,7 @@ router = APIRouter(prefix="/data", tags=["data"])
 
 
 @router.get("/historical")
-def get_historical_bars(query: HistoricalBarsQuery = Depends()):
+async def get_historical_bars(query: HistoricalBarsQuery = Depends()):
     """
     Fetch historical stock bars from Alpaca API.
 
@@ -30,6 +30,6 @@ def get_historical_bars(query: HistoricalBarsQuery = Depends()):
         dict: JSON response with bar data or error message.
     """
     try:
-        return fetch_all_historical_bars(query)
+        return await fetch_all_historical_bars(query)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -3,51 +3,39 @@ Business logic for user settings.
 Provides CRUD operations and admin-only update enforcement.
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from uuid import UUID
 from fastapi import HTTPException
 
 from app.models.user_setting import UserSetting
 from app.schemas.user_setting import UserSettingUpdate
+from typing import Optional
 
 
-def get_user_setting(db: Session, user_id: UUID) -> UserSetting | None:
+async def get_user_setting(db: AsyncSession, user_id: UUID) -> Optional[UserSetting]:
     """
     Retrieve settings for a specific user.
     """
-    
-    #TODO: testing
-    
-    return db.query(UserSetting).filter(UserSetting.user_id == user_id).first()
+    result = await db.execute(
+        select(UserSetting).where(UserSetting.user_id == user_id)
+    )
+    return result.scalar_one_or_none()
 
 
-def update_user_setting(
-    db: Session, user_id: UUID, updates: UserSettingUpdate
+async def update_user_setting(
+    db: AsyncSession, user_id: UUID, updates: UserSettingUpdate
 ) -> UserSetting:
     """
     Update user settings (admin-only logic enforced in API layer).
-
-    Args:
-        db: DB session
-        user_id: UUID of the user to update settings for
-        updates: Fields to modify
-
-    Returns:
-        Updated UserSetting object
-
-    Raises:
-        HTTPException: If setting not found
     """
-    
-    #TODO: testing
-    
-    setting = get_user_setting(db, user_id)
+    setting = await get_user_setting(db, user_id)
     if not setting:
         raise HTTPException(status_code=404, detail="User setting not found")
 
     for key, value in updates.model_dump().items():
         setattr(setting, key, value)
 
-    db.commit()
-    db.refresh(setting)
+    await db.commit()
+    await db.refresh(setting)
     return setting

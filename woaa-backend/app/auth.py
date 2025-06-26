@@ -9,6 +9,11 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.models.user import User
 
 # Load .env variables
 load_dotenv()
@@ -39,12 +44,16 @@ def create_access_token(data: dict, expires_delta: timedelta = None) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+) -> User:
     """
     Extracts and returns the current user from the JWT token.
 
     Args:
         token (str): JWT token provided via the Authorization header.
+        db (AsyncSession): Async SQLAlchemy session.
 
     Returns:
         User: The authenticated SQLAlchemy User instance.
@@ -52,10 +61,6 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     Raises:
         HTTPException: If the token is invalid or user is not found.
     """
-    from app.database import get_db
-    from app.models.user import User
-    from sqlalchemy.orm import Session
-
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -70,8 +75,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
 
-    db: Session = next(get_db())
-    user = db.query(User).filter(User.id == user_id).first()
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+
     if user is None:
         raise credentials_exception
     return user

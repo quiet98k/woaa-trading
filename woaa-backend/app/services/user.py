@@ -3,7 +3,9 @@ User-related service logic including user creation, admin creation,
 and default user setting initialization.
 """
 
-from sqlalchemy.orm import Session
+from datetime import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from uuid import UUID
 from fastapi import HTTPException
 
@@ -13,20 +15,10 @@ from app.schemas.user import UserCreate, AdminCreate
 from app.utils.security import hash_password
 
 
-def create_default_user_setting(db: Session, user_id: UUID) -> UserSetting:
+async def create_default_user_setting(db: AsyncSession, user_id: UUID) -> UserSetting:
     """
     Create default simulation settings for a newly registered user.
-
-    Args:
-        db: SQLAlchemy session.
-        user_id: UUID of the new user.
-
-    Returns:
-        The created UserSetting.
     """
-
-    #TODO: testing
-
     default_setting = UserSetting(
         user_id=user_id,
         commission_rate=0.001,
@@ -41,30 +33,26 @@ def create_default_user_setting(db: Session, user_id: UUID) -> UserSetting:
         drawdown_rate_threshold=0.25,
         power_up_fee=10.0,
         power_up_type=SettingType.SIM,
+        start_time=datetime(2024, 5, 1),
+        sim_time=datetime(2024, 5, 1),
+        speed=1.0
     )
     db.add(default_setting)
-    db.commit()
-    db.refresh(default_setting)
+    await db.commit()
+    await db.refresh(default_setting)
     return default_setting
 
 
-def create_user_with_settings(db: Session, user: UserCreate) -> User:
+async def create_user_with_settings(db: AsyncSession, user: UserCreate) -> User:
     """
     Create a new user and associated default settings.
-
-    Args:
-        db: SQLAlchemy session
-        user: UserCreate schema
-
-    Returns:
-        The newly created user.
     """
-    
-    #TODO: testing
-    
-    if db.query(User).filter(User.email == user.email).first():
+    result = await db.execute(select(User).where(User.email == user.email))
+    if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
-    if db.query(User).filter(User.username == user.username).first():
+
+    result = await db.execute(select(User).where(User.username == user.username))
+    if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Username already taken")
 
     new_user = User(
@@ -74,30 +62,23 @@ def create_user_with_settings(db: Session, user: UserCreate) -> User:
         is_admin=False
     )
     db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    await db.commit()
+    await db.refresh(new_user)
 
-    create_default_user_setting(db, new_user.id)
+    await create_default_user_setting(db, new_user.id)
     return new_user
 
 
-def create_admin_user_with_settings(db: Session, admin: AdminCreate) -> User:
+async def create_admin_user_with_settings(db: AsyncSession, admin: AdminCreate) -> User:
     """
-    Create a new admin user.
-
-    Args:
-        db: SQLAlchemy session
-        admin: AdminCreate schema
-
-    Returns:
-        The newly created admin user.
+    Create a new admin user and default settings.
     """
-    
-    #TODO: testing
-    
-    if db.query(User).filter(User.email == admin.email).first():
+    result = await db.execute(select(User).where(User.email == admin.email))
+    if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
-    if db.query(User).filter(User.username == admin.username).first():
+
+    result = await db.execute(select(User).where(User.username == admin.username))
+    if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Username already taken")
 
     new_admin = User(
@@ -107,8 +88,8 @@ def create_admin_user_with_settings(db: Session, admin: AdminCreate) -> User:
         is_admin=True
     )
     db.add(new_admin)
-    db.commit()
-    db.refresh(new_admin)
-    
-    create_default_user_setting(db, new_admin.id)
+    await db.commit()
+    await db.refresh(new_admin)
+
+    await create_default_user_setting(db, new_admin.id)
     return new_admin

@@ -3,31 +3,21 @@ Service functions for business logic related to transactions.
 Handles CRUD operations and interaction with the database.
 """
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 from uuid import UUID
 from fastapi import HTTPException
+from typing import List, Optional
 
 from app.models.transaction import Transaction
 from app.models.user import User
 from app.schemas.transaction import TransactionCreate, TransactionUpdate
 
 
-def create_transaction(db: Session, tx_data: TransactionCreate, user_id: UUID) -> Transaction:
-    """
-    Create and store a new transaction after validating simulated funds.
+async def create_transaction(db: AsyncSession, tx_data: TransactionCreate, user_id: UUID) -> Transaction:
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
 
-    Args:
-        db: Database session.
-        tx_data: TransactionCreate schema.
-        user_id: Authenticated user's UUID.
-
-    Returns:
-        Transaction: Created transaction instance.
-
-    Raises:
-        HTTPException: If user is not found or has insufficient simulated balance.
-    """
-    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -44,97 +34,44 @@ def create_transaction(db: Session, tx_data: TransactionCreate, user_id: UUID) -
 
     transaction = Transaction(**tx_data.model_dump(), user_id=user_id)
     db.add(transaction)
-    db.commit()
-
-    # Refresh to reflect updated balance and transaction state
-    db.refresh(transaction)
-    db.refresh(user)  # <- this is what you're referring to
+    await db.commit()
+    await db.refresh(transaction)
+    await db.refresh(user)
 
     return transaction
 
 
-
-def get_transaction_by_id(db: Session, tx_id: UUID) -> Transaction | None:
-    """
-    Fetch a single transaction by ID.
-
-    Args:
-        db: DB session.
-        tx_id: UUID of the transaction.
-
-    Returns:
-        Transaction or None.
-    """
-    
-    #TODO: testing
-    
-    return db.query(Transaction).filter(Transaction.id == tx_id).first()
+async def get_transaction_by_id(db: AsyncSession, tx_id: UUID) -> Optional[Transaction]:
+    result = await db.execute(select(Transaction).where(Transaction.id == tx_id))
+    return result.scalar_one_or_none()
 
 
-def get_user_transactions(db: Session, user_id: UUID) -> list[Transaction]:
-    """
-    Return all transactions for a given user.
-
-    Args:
-        db: DB session.
-        user_id: UUID of the user.
-
-    Returns:
-        List of transactions.
-    """
-    
-    #TODO: testing
-    
-    return db.query(Transaction).filter(Transaction.user_id == user_id).order_by(Transaction.timestamp.desc()).all()
+async def get_user_transactions(db: AsyncSession, user_id: UUID) -> List[Transaction]:
+    result = await db.execute(
+        select(Transaction)
+        .where(Transaction.user_id == user_id)
+        .order_by(Transaction.timestamp.desc())
+    )
+    return result.scalars().all()
 
 
-def update_transaction(db: Session, tx_id: UUID, updates: TransactionUpdate) -> Transaction:
-    """
-    Update an existing transaction (notes only).
-
-    Args:
-        db: DB session.
-        tx_id: Transaction UUID.
-        updates: Fields to update.
-
-    Returns:
-        Updated transaction.
-
-    Raises:
-        HTTPException if transaction not found.
-    """
-    
-    #TODO: testing
-    
-    tx = get_transaction_by_id(db, tx_id)
+async def update_transaction(db: AsyncSession, tx_id: UUID, updates: TransactionUpdate) -> Transaction:
+    tx = await get_transaction_by_id(db, tx_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
     for key, value in updates.model_dump(exclude_unset=True).items():
         setattr(tx, key, value)
 
-    db.commit()
-    db.refresh(tx)
+    await db.commit()
+    await db.refresh(tx)
     return tx
 
 
-def delete_transaction(db: Session, tx_id: UUID) -> None:
-    """
-    Delete a transaction by ID.
-
-    Args:
-        db: DB session.
-        tx_id: UUID of the transaction.
-
-    Raises:
-        HTTPException if not found.
-    """
-    
-    #TODO: testing
-    
-    tx = get_transaction_by_id(db, tx_id)
+async def delete_transaction(db: AsyncSession, tx_id: UUID) -> None:
+    tx = await get_transaction_by_id(db, tx_id)
     if not tx:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
-    db.delete(tx)
-    db.commit()
+    await db.delete(tx)
+    await db.commit()

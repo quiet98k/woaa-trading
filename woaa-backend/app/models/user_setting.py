@@ -3,7 +3,7 @@ Defines the SQLAlchemy model for user settings.
 Stores simulation and trading configuration parameters for each user.
 """
 
-from sqlalchemy import Column, String, Float, Enum, DateTime, ForeignKey
+from sqlalchemy import Boolean, Column, String, Float, Enum, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from enum import Enum as PyEnum
@@ -55,6 +55,6 @@ class UserSetting(Base):
     speed = Column(Float, default=1.0)
     sim_time = Column(DateTime(timezone=True), nullable=False)
     last_updated = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-
+    paused = Column(Boolean, nullable=False, default=False)
 
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
