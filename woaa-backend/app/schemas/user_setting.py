@@ -34,6 +34,7 @@ class UserSettingBase(BaseModel):
     speed: float
     
     sim_time: datetime
+    last_updated: datetime
 
 
 class UserSettingUpdate(UserSettingBase):

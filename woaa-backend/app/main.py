@@ -9,10 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+from typing import AsyncGenerator
 
 from app.database import engine, Base
 from app.api import auth
-from app.api import user, position, user_setting, transaction, data, data_ws, sim_ws   # Add more routers as needed
+from app.api import user, position, user_setting, transaction, data, data_ws
+from app.tasks.simulation import update_simulation_time   # Add more routers as needed
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,7 +28,7 @@ origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Async context manager for FastAPI lifespan events.
     Initializes DB and launches background sim clock task.
@@ -38,6 +40,19 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         print("❌ Failed to connect to DB:", e)
+
+    # Start simulation time updater in background
+    task = asyncio.create_task(update_simulation_time())
+    print("🕒 Simulation updater started")
+
+    try:
+        yield  # App is running
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            print("🛑 Simulation updater stopped")
 
 
 
@@ -83,7 +98,6 @@ app.include_router(user_setting.router)
 app.include_router(transaction.router)
 app.include_router(data.router)
 app.include_router(data_ws.router)
-app.include_router(sim_ws.router)
 
 
 # app.include_router(admin.router, prefix="/admin", tags=["admin"])

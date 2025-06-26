@@ -54,6 +54,7 @@ class UserSetting(Base):
     start_time = Column(DateTime(timezone=True), nullable=False)
     speed = Column(Float, default=1.0)
     sim_time = Column(DateTime(timezone=True), nullable=False)
+    last_updated = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
