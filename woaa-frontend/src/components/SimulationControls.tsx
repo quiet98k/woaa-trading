@@ -18,34 +18,45 @@ import { useMe } from "../hooks/useUser";
 export default function SimulationControls(): JSX.Element {
   const { data: user, isLoading, error } = useMe();
   const userId = user?.id;
-  const updateStartTime = useUpdateStartTime();
 
   const { simTime, connected } = useSimTime(userId ?? "");
   const { data: settings } = useUserSettings();
   const updateSpeed = useUpdateSpeed();
   const updatePause = useUpdatePause();
+  const updateStartTime = useUpdateStartTime();
 
   const [localStartDate, setLocalStartDate] = useState("");
+  const [initialStartDate, setInitialStartDate] = useState("");
   const [localSpeed, setLocalSpeed] = useState(1);
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     if (settings) {
-      setLocalStartDate(settings.start_time?.split("T")[0] ?? "");
+      const startDate = settings.start_time?.split("T")[0] ?? "";
+      setLocalStartDate(startDate);
+      setInitialStartDate(startDate);
       setLocalSpeed(settings.speed ?? 1);
       setIsPaused(settings.paused ?? false);
     }
   }, [settings]);
 
   const handlePauseToggle = () => {
-    updatePause.mutate(!isPaused);
-    setIsPaused((prev) => !prev);
+    const newPaused = !isPaused;
+    updatePause.mutate(newPaused);
+    setIsPaused(newPaused);
   };
 
-  const handleApplyChanges = () => {
-    updateSpeed.mutate(localSpeed);
-    updateStartTime.mutate(localStartDate);
+  const handleSpeedChange = (value: number) => {
+    setLocalSpeed(value);
+    updateSpeed.mutate(value);
   };
+
+  const handleRestart = () => {
+    updateStartTime.mutate(localStartDate);
+    setInitialStartDate(localStartDate); // Update reference after successful change
+  };
+
+  const isStartDateChanged = localStartDate !== initialStartDate;
 
   if (isLoading) {
     return <div className="text-gray-500">Loading simulation controls...</div>;
@@ -72,7 +83,7 @@ export default function SimulationControls(): JSX.Element {
         <select
           className="flex-1 bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={localSpeed}
-          onChange={(e) => setLocalSpeed(parseInt(e.target.value))}
+          onChange={(e) => handleSpeedChange(parseInt(e.target.value))}
         >
           {[1, 2, 3, 4, 5].map((speed) => (
             <option key={speed} value={speed}>
@@ -82,13 +93,13 @@ export default function SimulationControls(): JSX.Element {
         </select>
       </div>
 
-      {/* Start Date (read-only for now) */}
+      {/* Start Date */}
       <div className="flex items-center justify-between gap-2">
         <label className="text-gray-600 w-1/2">
           Start Date
           {settings?.start_time && (
             <span className="ml-2 text-gray-400 text-xs">
-              (default: {settings.start_time.split("T")[0]})
+              (current: {initialStartDate})
             </span>
           )}
         </label>
@@ -100,7 +111,7 @@ export default function SimulationControls(): JSX.Element {
         />
       </div>
 
-      {/* Pause / Resume & Apply */}
+      {/* Pause / Resume & Restart */}
       <div className="flex justify-between items-center gap-2">
         <button
           className={`${
@@ -114,10 +125,13 @@ export default function SimulationControls(): JSX.Element {
         </button>
 
         <button
-          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs focus:outline-none active:outline-none"
-          onClick={handleApplyChanges}
+          className={`bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs focus:outline-none active:outline-none ${
+            isStartDateChanged ? "" : "opacity-50 cursor-not-allowed"
+          }`}
+          onClick={handleRestart}
+          disabled={!isStartDateChanged}
         >
-          Apply Changes
+          Restart
         </button>
       </div>
     </div>

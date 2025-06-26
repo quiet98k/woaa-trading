@@ -94,6 +94,7 @@ async def set_my_start_time(
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
 
     setting.start_time = parsed_start
+    setting.sim_time = parsed_start
     await db.commit()
     await db.refresh(setting)
 
@@ -101,7 +102,7 @@ async def set_my_start_time(
         db,
         current_user.id,
         "set_start_time",
-        f"Set start_time to {start_time}",
+        f"Set start_time and sim_time to {start_time}",
     )
     return setting
 
