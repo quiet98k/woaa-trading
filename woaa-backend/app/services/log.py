@@ -47,7 +47,7 @@ def get_logs_by_user(db: Session, user_id: UUID) -> list[Log]:
     
     return db.query(Log).filter(Log.user_id == user_id).order_by(Log.timestamp.desc()).all()
 
-def log_action(db: Session, user_id: UUID, action: str, details: str) -> None:
+async def log_action(db: Session, user_id: UUID, action: str, details: str) -> None:
     """
     Utility to quickly log a user action.
 
@@ -62,4 +62,4 @@ def log_action(db: Session, user_id: UUID, action: str, details: str) -> None:
     
     log = Log(user_id=user_id, action=action, details=details)
     db.add(log)
-    db.commit()
+    await db.commit()

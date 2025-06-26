@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from typing import AsyncGenerator
 
-from app.database import engine, Base
+from app.database import sync_engine, Base
 from app.api import auth
 from app.api import user, position, user_setting, transaction, data, data_ws
 from app.tasks.simulation import update_simulation_time   # Add more routers as needed
@@ -34,10 +34,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Initializes DB and launches background sim clock task.
     """
     try:
-        with engine.connect() as conn:
+        with sync_engine.connect() as conn:
             result = conn.execute(text("SELECT 1"))
             print("✅ DB connected:", result.scalar_one())
-        Base.metadata.create_all(bind=engine)
+        Base.metadata.create_all(bind=sync_engine)
     except Exception as e:
         print("❌ Failed to connect to DB:", e)
 

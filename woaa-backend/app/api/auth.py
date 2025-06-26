@@ -10,6 +10,7 @@ Endpoints:
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.future import select
 from fastapi.security import OAuth2PasswordRequestForm
 from app.database import get_db
 from app.schemas.user import UserCreate, UserOut, AdminCreate
@@ -82,7 +83,7 @@ def register_admin(
 
 
 @router.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
     Authenticate user and return an access token.
 
@@ -98,7 +99,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     """
     logger.debug(f"Login attempt for email: {form_data.username}")
 
-    user = db.query(User).filter(User.email == form_data.username).first()
+    result = await db.execute(select(User).where(User.email == form_data.username))
+    user = result.scalar_one_or_none()
 
     if not user:
         logger.warning(f"Login failed: no user found with email {form_data.username}")
