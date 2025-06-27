@@ -149,8 +149,6 @@ export default function Chart({ onLatestBarUpdate }: ChartProps): JSX.Element {
       }
     }
   }, [data, symbol, onLatestBarUpdate]);
-  
-
 
   useEffect(() => {
     if (!chartRef.current || !seriesRef.current || !containerRef.current)
@@ -208,9 +206,6 @@ export default function Chart({ onLatestBarUpdate }: ChartProps): JSX.Element {
         <div>H: ${high}</div>
         <div>L: ${low}</div>
         <div>C: ${close}</div>
-        <div style="margin-top: 4px;">${new Date(
-          param.time * 1000
-        ).toLocaleString()}</div>
       `;
 
       const TOOLTIP_MARGIN_X = 8;

@@ -3,9 +3,13 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
+import AlpacaTest from "./pages/AlpacaTest";
 
 function App() {
   return (
+    // <div>
+    //   <AlpacaTest />
+    // </div>
     <Router>
       <Routes>
         <Route path="/login" element={<LoginPage />} />

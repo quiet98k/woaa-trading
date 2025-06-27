@@ -72,8 +72,13 @@ export default function SharesInput({
           });
 
           updateBalances.mutate({
-            sim_balance: (user.sim_balance ?? 0) - cost,
+            sim_balance: parseFloat(
+              (
+                (user.sim_balance ?? 0) + (type === "Long" ? -cost : cost)
+              ).toFixed(2)
+            ),
           });
+          
         },
       }
     );

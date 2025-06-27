@@ -119,6 +119,7 @@ export default function Dashboard() {
                     type="number"
                     className="w-24 px-2 py-1 text-sm text-black border rounded-md"
                     value={newSimValue}
+                    placeholder={user?.sim_balance?.toString() ?? ""}
                     onChange={(e) => setNewSimValue(parseFloat(e.target.value))}
                   />
                   <button
@@ -144,7 +145,10 @@ export default function Dashboard() {
                   </span>
                   <button
                     className="text-sm text-green-600 underline"
-                    onClick={() => setIsEditingSim(true)}
+                    onClick={() => {
+                      setNewSimValue(user?.sim_balance ?? 0);
+                      setIsEditingSim(true);
+                    }}
                   >
                     Edit
                   </button>

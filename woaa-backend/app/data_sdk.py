@@ -24,8 +24,8 @@ client = StockHistoricalDataClient(
 request_params = StockBarsRequest(
   symbol_or_symbols=["NVDA"],
   timeframe=TimeFrame.Minute,
-  start=datetime(2024, 3, 5,),
-  end=datetime(2024, 3, 7,)
+  start=datetime(2024, 3, 5, 12, 12),
+  end=datetime(2024, 3, 5, 12, 13)
 )
 
 # Retrieve daily bars for Bitcoin in a DataFrame and printing it

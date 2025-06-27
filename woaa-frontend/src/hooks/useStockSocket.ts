@@ -70,8 +70,9 @@ export function useStockSocket(query: HistoricalBarsQuery) {
       const bars: BarResponse = payload.bars;
 
       const rawBars = bars[query.symbols] || [];
+      console.log("[Socket] Raw Data:", rawBars);
       const transformed: CandlestickData[] = rawBars.map((bar) => {
-        const timestamp = Math.floor(new Date(bar.t).getTime() / 1000);
+        const timestamp = new Date(bar.t).getTime() / 1000;
         return {
           time: timestamp,
           open: bar.o,

@@ -1,65 +1,75 @@
 """
-Service module for fetching historical bar data from Alpaca,
-merging all paginated results grouped by symbol.
+Service module for fetching historical stock bar data from Alpaca using their Python SDK,
+returning grouped results by symbol.
 """
 
 import os
-from typing import Dict, List, Any
+from datetime import datetime
+from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
-from app.schemas.data import HistoricalBarsQuery
-import httpx
+from alpaca.data.historical import StockHistoricalDataClient
+from alpaca.data.requests import StockBarsRequest
+from alpaca.data.timeframe import TimeFrame
+from fastapi.concurrency import run_in_threadpool
 
 load_dotenv()
 
-ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
-ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
-BASE_URL = os.getenv("ALPACA_BASE_URL", "https://data.alpaca.markets/v2/stocks/bars")
+API_KEY = os.getenv("ALPACA_API_KEY")
+API_SECRET = os.getenv("ALPACA_SECRET_KEY")
+
+stock_client = StockHistoricalDataClient(api_key=API_KEY, secret_key=API_SECRET)
 
 
-async def fetch_all_historical_bars(query: HistoricalBarsQuery) -> Dict[str, Any]:
+async def fetch_all_historical_bars(
+    symbols: List[str],
+    timeframe: str,
+    start: str,
+    end: str,
+    adjustment: Optional[str] = None,
+    feed: Optional[str] = None,
+    limit: Optional[int] = None
+) -> Dict[str, Any]:
     """
-    Asynchronously fetches and merges paginated historical bar data by symbol.
+    Fetch historical stock bars using Alpaca SDK and return grouped bars by symbol.
 
     Args:
-        query (HistoricalBarsQuery): Validated query parameters.
+        symbols: List of stock symbols.
+        timeframe: Timeframe as a string (e.g. "Minute", "Hour", "Day").
+        start: ISO timestamp start.
+        end: ISO timestamp end.
+        adjustment: Optional adjustment setting.
+        feed: Optional feed setting.
+        limit: Optional bar limit per symbol.
 
     Returns:
-        Dict[str, Any]: Merged result with "bars" as a dict of symbols to list of bars.
+        Dictionary with 'bars' mapping each symbol to a list of bar dicts.
 
     Raises:
-        Exception: If Alpaca API returns an error.
+        Exception: If Alpaca SDK call fails or parameters are invalid.
     """
-    all_data = {
-        "bars": {}
-    }
+    try:
+        tf_enum = getattr(TimeFrame, timeframe)
 
-    page_token = None
+        request = StockBarsRequest(
+            symbol_or_symbols=symbols,
+            timeframe=tf_enum,
+            start=datetime.fromisoformat(start),
+            end=datetime.fromisoformat(end),
+            adjustment=adjustment,
+            feed=feed,
+            limit=limit,
+        )
 
-    async with httpx.AsyncClient() as client:
-        while True:
-            query.page_token = page_token
-            params = query.model_dump(exclude_none=True)
+        bars = await run_in_threadpool(stock_client.get_stock_bars, request)
+        df = bars.df.reset_index()
+        grouped = df.groupby("symbol")
 
-            headers = {
-                "accept": "application/json",
-                "APCA-API-KEY-ID": ALPACA_API_KEY,
-                "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY,
+        return {
+            "bars": {
+                symbol: group.to_dict(orient="records")
+                for symbol, group in grouped
             }
+        }
 
-            response = await client.get(BASE_URL, headers=headers, params=params)
-
-            if response.status_code != 200:
-                raise Exception(f"Alpaca API error: {response.status_code} - {response.text}")
-
-            data = response.json()
-
-            for symbol, bars in data.get("bars", {}).items():
-                if symbol not in all_data["bars"]:
-                    all_data["bars"][symbol] = []
-                all_data["bars"][symbol].extend(bars)
-
-            page_token = data.get("next_page_token")
-            if not page_token:
-                break
-
-    return all_data
+    except Exception as e:
+        raise Exception(f"Failed to fetch historical stock bars: {e}")
