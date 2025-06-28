@@ -61,10 +61,12 @@ function getNextMarketDay(date: Date): string {
 }
 
 interface ChartProps {
-  userId: string;
+  setChartState: React.Dispatch<
+    React.SetStateAction<{ symbol: string; openPrice: number | null }>
+  >;
 }
 
-export default function Chart({ userId }: ChartProps) {
+export default function Chart({ setChartState }: ChartProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -119,6 +121,10 @@ export default function Chart({ userId }: ChartProps) {
       .at(-1);
     return match?.o ?? null;
   }, [bars1D.data, selectedSymbol, simTime]);
+
+  useEffect(() => {
+    setChartState({ symbol: selectedSymbol, openPrice });
+  }, [selectedSymbol, openPrice, setChartState]);
 
   useEffect(() => {
     if (!containerRef.current || !data?.bars[selectedSymbol]) return;
