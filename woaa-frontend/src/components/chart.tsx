@@ -1,307 +1,167 @@
 /**
- * @fileoverview
- * Candlestick Chart Component using TradingView Lightweight Charts.
- * Includes company selector dropdown, timeframe/interval controls,
- * and WebSocket integration for real-time historical bar data.
+ * @fileoverview Candlestick chart component with dropdowns and live sim time updates.
+ * Updates ChartContext with selected symbol and open price.
  */
 
-import React, { useEffect, useRef, useState, useMemo, type JSX } from "react";
 import {
   createChart,
   CandlestickSeries,
   type IChartApi,
-  type Time,
-  type LogicalRange,
+  type UTCTimestamp,
+  type CandlestickData,
+  type ISeriesApi,
 } from "lightweight-charts";
-import { useStockSocket } from "../hooks/useStockSocket";
-import { formatISO, addDays, addMonths } from "date-fns";
+import { useEffect, useMemo, useRef, useState, useContext, type JSX } from "react";
+import { useHistoricalBars } from "../hooks/useHistoricalBars";
+import { useSimTime } from "../hooks/useSimTimeSocket";
+import { ChartContext, type ChartState } from "../pages/Dashboard";
 
-const DEFAULT_SYMBOL = "AAPL";
-const TIME_OPTIONS = ["1D/1Min", "5D/5Min", "1M/1D", "1Y/1M"] as const;
-type TimeOption = (typeof TIME_OPTIONS)[number];
-
-const TIMEFRAME_INTERVAL_MAP: Record<TimeOption, [string, string]> = {
-  "1D/1Min": ["1Day", "1Min"],
-  "5D/5Min": ["5Day", "5Min"],
-  "1M/1D": ["1Month", "1Day"],
-  "1Y/1M": ["1Year", "1Month"],
+const SYMBOL_OPTIONS: Record<string, string> = {
+  Apple: "AAPL",
+  Google: "GOOGL",
+  Nvidia: "NVDA",
+  Costco: "COST",
+  Spy: "SPY",
+  Dia: "DIA",
+  QQQ: "QQQ",
+  Lucid: "LCID",
+  VXX: "VXX",
 };
 
-const END_OFFSET_MAP: Record<TimeOption, { days?: number; months?: number }> = {
-  "1D/1Min": { days: 1 },
-  "5D/5Min": { days: 5 },
-  "1M/1D": { months: 1 },
-  "1Y/1M": { months: 12 },
+type TimeOption = "1D" | "1M" | "1Y";
+
+const TIMEFRAME_INTERVAL_MAP: Record<
+  TimeOption,
+  {
+    timeframe: string;
+    rangeDays?: number;
+    rangeMonths?: number;
+    rangeYears?: number;
+  }
+> = {
+  "1D": { timeframe: "1Min", rangeDays: 1 },
+  "1M": { timeframe: "1Day", rangeMonths: 1 },
+  "1Y": { timeframe: "1Month", rangeYears: 1 },
 };
 
-const SYMBOLS = [
-  "AAPL",
-  "GOOG",
-  "NVDA",
-  "COST",
-  "SPY",
-  "DIA",
-  "QQQ",
-  "LCID",
-  "VXX",
-];
+function getPreviousMarketDay(date: Date): string {
+  const d = new Date(date);
+  do d.setDate(d.getDate() - 1);
+  while (d.getDay() === 0 || d.getDay() === 6);
+  return d.toISOString().split("T")[0];
+}
 
-export interface LatestBar {
-  time: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
+function getNextMarketDay(date: Date): string {
+  const d = new Date(date);
+  do d.setDate(d.getDate() + 1);
+  while (d.getDay() === 0 || d.getDay() === 6);
+  return d.toISOString().split("T")[0];
 }
 
 interface ChartProps {
-  onLatestBarUpdate?: (symbol: string, bar: LatestBar) => void;
+  setChartState: React.Dispatch<React.SetStateAction<ChartState>>;
 }
 
-export default function Chart({ onLatestBarUpdate }: ChartProps): JSX.Element {
-  const containerRef = useRef<HTMLDivElement>(null);
+export default function Chart({ setChartState }: ChartProps): JSX.Element {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<any>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
-  const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
-  const [range, setRange] = useState<TimeOption>("1M/1D");
-  const [visibleStart, setVisibleStart] = useState("2024-01-01");
-  const [visibleEnd, setVisibleEnd] = useState("2024-02-01");
+  const [selectedSymbol, setSelectedSymbol] = useState("AAPL");
+  const [selectedRange, setSelectedRange] = useState<TimeOption>("1D");
+  const { simTime } = useSimTime();
 
-  const [startISO, setStartISO] = useState<string>("");
-  const [endISO, setEndISO] = useState<string>("");
+  const buildOptions = (range: TimeOption) => {
+    if (!simTime) return null;
+    const config = TIMEFRAME_INTERVAL_MAP[range];
+    const end = getNextMarketDay(simTime);
+    const startDate = new Date(simTime);
+    if (config.rangeDays)
+      startDate.setDate(startDate.getDate() - config.rangeDays);
+    if (config.rangeMonths)
+      startDate.setMonth(startDate.getMonth() - config.rangeMonths);
+    if (config.rangeYears)
+      startDate.setFullYear(startDate.getFullYear() - config.rangeYears);
+    const start = getPreviousMarketDay(startDate);
+    return { symbols: selectedSymbol, start, end, timeframe: config.timeframe };
+  };
 
-  const [timeframe, interval] = useMemo(
-    () => TIMEFRAME_INTERVAL_MAP[range],
-    [range]
+  const options1D = useMemo(
+    () => buildOptions("1D"),
+    [simTime, selectedSymbol]
   );
+  const bars1D = useHistoricalBars(options1D!, !!options1D);
 
-  // Compute start and end ISO whenever range changes
-  useEffect(() => {
-    const offset = END_OFFSET_MAP[range];
-    const end = new Date("2024-12-31");
-
-    const start = offset.days
-      ? addDays(end, -offset.days)
-      : addMonths(end, -(offset.months || 1));
-
-    console.log("startDay:", start);
-
-    setStartISO(formatISO(start, { representation: "date" }));
-    setEndISO(formatISO(end, { representation: "date" }));
-  }, [range]);
-
-  const query = useMemo(
-    () => ({
-      symbols: symbol,
-      timeframe: interval,
-      start: startISO,
-      end: endISO,
-    }),
-    [symbol, interval, startISO, endISO]
-  );
-
-  const { data, loading } = useStockSocket(query);
+  const openPrice = useMemo(() => {
+    if (!bars1D.data?.bars[selectedSymbol] || !simTime) return null;
+    const match = bars1D.data.bars[selectedSymbol]
+      .filter((bar) => new Date(bar.t) <= simTime)
+      .at(-1);
+    return match?.o ?? null;
+  }, [bars1D.data, selectedSymbol, simTime]);
 
   useEffect(() => {
-    if (containerRef.current && !chartRef.current) {
-      chartRef.current = createChart(containerRef.current, {
-        width: containerRef.current.clientWidth,
-        height: 400,
-        layout: {
-          background: { color: "white" },
-          textColor: "black",
-        },
-        timeScale: { timeVisible: true },
-      });
-
-      seriesRef.current = chartRef.current.addSeries(CandlestickSeries, {
-        upColor: "#26a69a",
-        downColor: "#ef5350",
-        borderVisible: false,
-        wickUpColor: "#26a69a",
-        wickDownColor: "#ef5350",
-      });
-    }
-
-    return () => {
-      chartRef.current?.remove();
-      chartRef.current = null;
-    };
-  }, []);
+    setChartState({ symbol: selectedSymbol, openPrice });
+  }, [selectedSymbol, openPrice]);
 
   useEffect(() => {
-    if (data && seriesRef.current) {
-      console.log("[Chart] Updating series data:", data);
-      seriesRef.current.setData(data);
-      chartRef.current?.timeScale().fitContent();
-    }
-  }, [data]);
+    if (!containerRef.current || !bars1D.data?.bars[selectedSymbol]) return;
+    if (chartRef.current) chartRef.current.remove();
 
-  useEffect(() => {
-    if (data && seriesRef.current) {
-      seriesRef.current.setData(data);
-      chartRef.current?.timeScale().fitContent();
+    const chart = createChart(containerRef.current, {
+      layout: { textColor: "black", background: { color: "white" } },
+      height: 400,
+      timeScale: { timeVisible: selectedRange === "1D" },
+      localization: {
+        timeFormatter: (ts: number) =>
+          new Date(ts * 1000).toLocaleTimeString("en-US", {
+            timeZone: "America/Los_Angeles",
+            hour: "numeric",
+            minute: "2-digit",
+          }),
+      },
+    });
 
-      const latestBar = data[data.length - 1];
-      if (latestBar && onLatestBarUpdate) {
-        onLatestBarUpdate(symbol, latestBar);
-      }
-    }
-  }, [data, symbol, onLatestBarUpdate]);
+    chartRef.current = chart;
 
-  useEffect(() => {
-    if (!chartRef.current || !seriesRef.current || !containerRef.current)
-      return;
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
+      upColor: "#26a69a",
+      downColor: "#ef5350",
+      borderVisible: false,
+      wickUpColor: "#26a69a",
+      wickDownColor: "#ef5350",
+    });
 
-    const container = containerRef.current;
+    seriesRef.current = candlestickSeries;
 
-    const toolTip = document.createElement("div");
-    toolTip.style = `
-      position: absolute;
-      display: none;
-      z-index: 1000;
-      padding: 8px;
-      box-sizing: border-box;
-      font-size: 12px;
-      text-align: left;
-      width: 140px;
-      height: auto;
-      background: white;
-      border: 1px solid rgba(38, 166, 154, 1);
-      border-radius: 4px;
-      pointer-events: none;
-      font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
-      color: black;
-    `;
-    container.appendChild(toolTip);
+    const transformed: CandlestickData[] = bars1D.data.bars[selectedSymbol]
+      .filter((bar) => new Date(bar.t) <= simTime!)
+      .map((bar) => ({
+        time: (new Date(bar.t).getTime() / 1000) as UTCTimestamp,
+        open: bar.o,
+        high: bar.h,
+        low: bar.l,
+        close: bar.c,
+      }));
 
-    const TOOLTIP_WIDTH = 140;
-    const TOOLTIP_HEIGHT = 100;
-
-    const moveHandler = (param: any) => {
-      if (
-        !param.point ||
-        !param.time ||
-        param.point.x < 0 ||
-        param.point.x > container.clientWidth ||
-        param.point.y < 0 ||
-        param.point.y > container.clientHeight
-      ) {
-        toolTip.style.display = "none";
-        return;
-      }
-
-      const data = param.seriesData.get(seriesRef.current);
-      if (!data) {
-        toolTip.style.display = "none";
-        return;
-      }
-
-      const { open, high, low, close } = data;
-
-      toolTip.innerHTML = `
-        <div><strong>${symbol}</strong></div>
-        <div>O: ${open}</div>
-        <div>H: ${high}</div>
-        <div>L: ${low}</div>
-        <div>C: ${close}</div>
-      `;
-
-      const TOOLTIP_MARGIN_X = 8;
-      const TOOLTIP_MARGIN_Y = 8;
-
-      // Position tooltip near the cursor, bottom-right by default
-      let left = param.point.x + TOOLTIP_MARGIN_X;
-      let top = param.point.y + TOOLTIP_MARGIN_Y;
-
-      // Shift left if it overflows horizontally
-      if (left + toolTip.offsetWidth > container.clientWidth) {
-        left = param.point.x - TOOLTIP_MARGIN_X - toolTip.offsetWidth;
-      }
-
-      // Shift up if it overflows vertically
-      if (top + toolTip.offsetHeight > container.clientHeight) {
-        top = param.point.y - TOOLTIP_MARGIN_Y - toolTip.offsetHeight;
-      }
-
-      toolTip.style.left = `${left}px`;
-      toolTip.style.top = `${top}px`;
-
-      toolTip.style.display = "block";
-    };
-
-    chartRef.current.subscribeCrosshairMove(moveHandler);
-
-    return () => {
-      chartRef.current?.unsubscribeCrosshairMove(moveHandler);
-      container.removeChild(toolTip);
-    };
-  }, [symbol]);
-
-  // useEffect(() => {
-  //   if (!chartRef.current) return;
-
-  //   const timeScale = chartRef.current.timeScale();
-  //   let debounceTimeout: NodeJS.Timeout | null = null;
-
-  //   const handleVisibleRangeChange = (
-  //     range: { from: Time; to: Time } | null
-  //   ) => {
-  //     if (!range) return;
-
-  //     if (debounceTimeout) clearTimeout(debounceTimeout);
-
-  //     debounceTimeout = setTimeout(() => {
-  //       console.log("📗 Debounced Visible Range (raw):", range);
-
-  //       const fromISO = new Date((range.from as number) * 1000).toISOString();
-  //       const toISO = new Date((range.to as number) * 1000).toISOString();
-
-  //       console.log("📆 Fetching from", fromISO, "to", toISO);
-
-  //       setStartISO(fromISO);
-  //       setEndISO(toISO);
-  //     }, 300);
-  //   };
-
-  //   timeScale.subscribeVisibleTimeRangeChange(handleVisibleRangeChange);
-
-  //   return () => {
-  //     if (debounceTimeout) clearTimeout(debounceTimeout);
-  //     timeScale.unsubscribeVisibleTimeRangeChange(handleVisibleRangeChange);
-  //   };
-  // }, []);
+    candlestickSeries.setData(transformed);
+    chart.timeScale().fitContent();
+  }, [bars1D.data, selectedSymbol]);
 
   return (
-    <div className="w-full">
-      <div className="flex justify-between mb-2">
-        <select
-          className="border border-gray-300 rounded px-2 py-1"
-          value={symbol}
-          onChange={(e) => setSymbol(e.target.value)}
-        >
-          {SYMBOLS.map((sym) => (
-            <option key={sym} value={sym}>
-              {sym}
-            </option>
-          ))}
-        </select>
-
-        <select
-          className="border border-gray-300 rounded px-2 py-1"
-          value={range}
-          onChange={(e) => setRange(e.target.value as TimeOption)}
-        >
-          {TIME_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div ref={containerRef} className="border rounded-lg shadow-md" />
+    <div className="flex flex-col gap-2">
+      <select
+        className="border p-2 rounded-md text-black"
+        value={selectedSymbol}
+        onChange={(e) => setSelectedSymbol(e.target.value)}
+      >
+        {Object.entries(SYMBOL_OPTIONS).map(([label, value]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <div ref={containerRef} className="w-full h-full" />
     </div>
   );
 }

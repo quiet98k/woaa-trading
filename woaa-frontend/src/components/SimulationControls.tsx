@@ -17,9 +17,8 @@ import { useMe } from "../hooks/useUser";
  */
 export default function SimulationControls(): JSX.Element {
   const { data: user, isLoading, error } = useMe();
-  const userId = user?.id;
 
-  const { simTime, connected } = useSimTime(userId ?? "");
+  const { simTime, connected } = useSimTime();
   const { data: settings } = useUserSettings();
   const updateSpeed = useUpdateSpeed();
   const updatePause = useUpdatePause();
@@ -62,7 +61,7 @@ export default function SimulationControls(): JSX.Element {
     return <div className="text-gray-500">Loading simulation controls...</div>;
   }
 
-  if (error || !userId) {
+  if (error) {
     return <div className="text-red-500">Unable to load user data</div>;
   }
 

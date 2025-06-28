@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
 
-export function useSimTime(userId: string) {
+/**
+ * Hook to subscribe to real-time simulation time via WebSocket using token-based auth.
+ *
+ * @returns { simTime, connected }
+ */
+export function useSimTime() {
   const [simTime, setSimTime] = useState<Date | null>(null);
   const [connected, setConnected] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!userId) return;
-
     const token = localStorage.getItem("token");
+    if (!token) return;
+
     const socket = new WebSocket(
       `ws://localhost:8000/ws/simulation/time?token=${token}`
     );
@@ -23,7 +28,7 @@ export function useSimTime(userId: string) {
           setSimTime(new Date(data.sim_time));
         }
       } catch (error) {
-        console.error("Failed to parse sim_time message:", error);
+        console.error("❌ Failed to parse sim_time message:", error);
       }
     };
 
@@ -32,13 +37,13 @@ export function useSimTime(userId: string) {
     };
 
     socket.onerror = (err) => {
-      console.error("WebSocket error:", err);
+      console.error("❌ WebSocket error:", err);
     };
 
     return () => {
       socket.close();
     };
-  }, [userId]);
+  }, []);
 
   return { simTime, connected };
 }
