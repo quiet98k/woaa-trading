@@ -1,12 +1,11 @@
-/**
- * @fileoverview Table component to display user trading positions,
- * including bought-in (open) price and current price using ChartContext.
- * Allows position deletion (for testing).
- */
-
 import React, { type JSX, useContext } from "react";
-import { useMyPositions, useDeletePosition } from "../hooks/usePositions";
+import {
+  useMyPositions,
+  useDeletePosition,
+  useUpdatePosition,
+} from "../hooks/usePositions";
 import { ChartContext } from "../pages/Dashboard";
+import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 
 /**
  * Table component to display a list of user positions with live open prices.
@@ -15,11 +14,58 @@ import { ChartContext } from "../pages/Dashboard";
  */
 export function PositionTable(): JSX.Element {
   const { data: positions, isLoading } = useMyPositions();
+  const { data: user } = useMe();
   const deleteMutation = useDeletePosition();
+  // Remove this line, and instead call useUpdatePosition with the position ID inside handleClose
+  const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const { openPrices } = useContext(ChartContext);
 
-  const handleDelete = (id: string) => {
-    deleteMutation.mutate(id);
+  const handleDelete = (p: any) => {
+    deleteMutation.mutate(p.id, {
+      onSuccess: () => {
+        if (user && p.status === "open") {
+          const refund =
+            p.open_price *
+            (p.position_type === "Long" ? p.open_shares : -p.open_shares);
+          updateBalances.mutate({
+            sim_balance: parseFloat((user.sim_balance + refund).toFixed(2)),
+          });
+        }
+      },
+    });
+  };
+
+  const handleClose = (p: any, currentPrice: number) => {
+    const realized =
+      (currentPrice - p.open_price) *
+      (p.position_type === "Long" ? p.open_shares : -p.open_shares);
+
+    const updatePosition = useUpdatePosition(p.id);
+
+    updatePosition.mutate(
+      {
+        positionId: p.id,
+        updates: {
+          close_price: currentPrice,
+          close_shares: p.open_shares,
+          close_time: new Date().toISOString(),
+          realized_pl: realized,
+          status: "closed",
+        },
+      },
+      {
+        onSuccess: () => {
+          if (user) {
+            const netCash =
+              currentPrice *
+              (p.position_type === "Long" ? p.open_shares : -p.open_shares);
+            updateBalances.mutate({
+              sim_balance: parseFloat((user.sim_balance + netCash).toFixed(2)),
+            });
+          }
+        },
+      }
+    );
   };
 
   return (
@@ -43,6 +89,7 @@ export function PositionTable(): JSX.Element {
           <tbody>
             {positions.map((p) => {
               const currentPrice = openPrices[p.symbol] ?? null;
+
               const unrealizedPL =
                 currentPrice !== null && p.status === "open"
                   ? (currentPrice - p.open_price) *
@@ -70,9 +117,17 @@ export function PositionTable(): JSX.Element {
                       ? `$${unrealizedPL.toFixed(2)}`
                       : "—"}
                   </td>
-                  <td className="px-1 py-1">
+                  <td className="px-1 py-1 flex gap-1 items-center">
+                    {p.status === "open" && currentPrice !== null && (
+                      <button
+                        onClick={() => handleClose(p, currentPrice)}
+                        className="text-blue-500 hover:underline"
+                      >
+                        {p.position_type === "Long" ? "Sell" : "Cover"}
+                      </button>
+                    )}
                     <button
-                      onClick={() => handleDelete(p.id)}
+                      onClick={() => handleDelete(p)}
                       className="text-red-500 hover:underline"
                     >
                       Delete

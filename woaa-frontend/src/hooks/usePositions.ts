@@ -48,11 +48,17 @@ export function useCreatePosition() {
 /**
  * Hook to update a specific position.
  */
-export function useUpdatePosition(positionId: string) {
+export function useUpdatePosition(p0: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (updates: any) => updatePosition(positionId, updates),
-    onSuccess: () => {
+    mutationFn: ({
+      positionId,
+      updates,
+    }: {
+      positionId: string;
+      updates: any;
+    }) => updatePosition(positionId, updates),
+    onSuccess: (_data, { positionId }) => {
       queryClient.invalidateQueries({ queryKey: ["positions"] });
       queryClient.invalidateQueries({ queryKey: ["position", positionId] });
     },
