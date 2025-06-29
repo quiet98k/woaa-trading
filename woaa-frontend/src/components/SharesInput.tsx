@@ -19,13 +19,17 @@ export default function SharesInput(): JSX.Element {
   const createTransaction = useCreateTransaction();
   const createPosition = useCreatePosition();
   const { data: user } = useMe();
-  const { symbol, openPrice } = useContext(ChartContext);
+  const { symbol, openPrices } = useContext(ChartContext);
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
 
-  if (!symbol || !openPrice) return <div>Loading symbol and price...</div>;
+  const openPrice = openPrices[symbol];
+
+  if (!symbol || openPrice === null || openPrice === undefined) {
+    return <div>Loading symbol and price...</div>;
+  }
 
   const handleTrade = (type: "Long" | "Short") => {
-    if (!openPrice || !user) return;
+    if (!user) return;
     const cost = shares * openPrice;
 
     if ((user.sim_balance ?? 0) < cost) {
@@ -67,7 +71,7 @@ export default function SharesInput(): JSX.Element {
   return (
     <div className="flex flex-col gap-2 w-full">
       <p className="text-xs text-gray-600">
-        {symbol} @ ${openPrice?.toFixed(2) ?? "—"}
+        {symbol} @ ${openPrice.toFixed(2)}
       </p>
 
       <div className="flex items-center gap-2">

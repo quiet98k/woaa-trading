@@ -62,7 +62,10 @@ function getNextMarketDay(date: Date): string {
 
 interface ChartProps {
   setChartState: React.Dispatch<
-    React.SetStateAction<{ symbol: string; openPrice: number | null }>
+    React.SetStateAction<{
+      symbol: string;
+      openPrices: Record<string, number | null>;
+    }>
   >;
 }
 
@@ -73,39 +76,48 @@ export default function Chart({ setChartState }: ChartProps) {
   const lastSimMinute = useRef<number | null>(null);
 
   const [selectedSymbol, setSelectedSymbol] = useState("AAPL");
-
   const [selectedRange, setSelectedRange] = useState<TimeOption>("1D");
+
   const { simTime } = useSimTime();
 
-  const buildOptions = (range: TimeOption) => {
-    if (!simTime || !selectedSymbol) return null;
-    const config = TIMEFRAME_INTERVAL_MAP[range];
+  const buildAllSymbols1DOptions = () => {
+    if (!simTime) return null;
+    const config = TIMEFRAME_INTERVAL_MAP["1D"];
     const end = getNextMarketDay(simTime);
     const startDate = new Date(simTime);
-    if (config.rangeDays)
-      startDate.setDate(startDate.getDate() - config.rangeDays);
-    if (config.rangeMonths)
-      startDate.setMonth(startDate.getMonth() - config.rangeMonths);
-    if (config.rangeYears)
-      startDate.setFullYear(startDate.getFullYear() - config.rangeYears);
+    startDate.setDate(startDate.getDate() - (config.rangeDays ?? 1));
     const start = getPreviousMarketDay(startDate);
-    return { symbols: selectedSymbol, start, end, timeframe: config.timeframe };
+    return {
+      symbols: Object.values(SYMBOL_OPTIONS).join(","),
+      start,
+      end,
+      timeframe: config.timeframe,
+    };
   };
 
-  const options1D = useMemo(
-    () => buildOptions("1D"),
-    [simTime, selectedSymbol]
-  );
-  const options1M = useMemo(
-    () => buildOptions("1M"),
-    [simTime, selectedSymbol]
-  );
-  const options1Y = useMemo(
-    () => buildOptions("1Y"),
-    [simTime, selectedSymbol]
-  );
+  const optionsAll1D = useMemo(() => buildAllSymbols1DOptions(), [simTime]);
+  const bars1D = useHistoricalBars(optionsAll1D!, !!optionsAll1D);
 
-  const bars1D = useHistoricalBars(options1D!, !!options1D);
+  const options1M = useMemo(() => {
+    if (!simTime || !selectedSymbol) return null;
+    const config = TIMEFRAME_INTERVAL_MAP["1M"];
+    const end = getNextMarketDay(simTime);
+    const startDate = new Date(simTime);
+    startDate.setMonth(startDate.getMonth() - (config.rangeMonths ?? 1));
+    const start = getPreviousMarketDay(startDate);
+    return { symbols: selectedSymbol, start, end, timeframe: config.timeframe };
+  }, [simTime, selectedSymbol]);
+
+  const options1Y = useMemo(() => {
+    if (!simTime || !selectedSymbol) return null;
+    const config = TIMEFRAME_INTERVAL_MAP["1Y"];
+    const end = getNextMarketDay(simTime);
+    const startDate = new Date(simTime);
+    startDate.setFullYear(startDate.getFullYear() - (config.rangeYears ?? 1));
+    const start = getPreviousMarketDay(startDate);
+    return { symbols: selectedSymbol, start, end, timeframe: config.timeframe };
+  }, [simTime, selectedSymbol]);
+
   const bars1M = useHistoricalBars(options1M!, !!options1M);
   const bars1Y = useHistoricalBars(options1Y!, !!options1Y);
 
@@ -113,18 +125,28 @@ export default function Chart({ setChartState }: ChartProps) {
     selectedRange === "1D" ? bars1D : selectedRange === "1M" ? bars1M : bars1Y;
   const { data, isLoading, isError } = barsResult;
 
-  const openPrice = useMemo(() => {
-    if (!bars1D.data?.bars[selectedSymbol] || !simTime) return null;
-    const minuteBars = bars1D.data.bars[selectedSymbol];
-    const match = [...minuteBars]
-      .filter((bar) => new Date(bar.t) <= simTime)
-      .at(-1);
-    return match?.o ?? null;
-  }, [bars1D.data, selectedSymbol, simTime]);
+  const allOpenPrices = useMemo(() => {
+    if (!bars1D.data?.bars || !simTime) return {};
+    const result: Record<string, number | null> = {};
+
+    Object.values(SYMBOL_OPTIONS).forEach((symbol) => {
+      const bars = bars1D.data?.bars[symbol];
+      if (!bars) {
+        result[symbol] = null;
+        return;
+      }
+      const match = [...bars]
+        .filter((bar) => new Date(bar.t) <= simTime)
+        .at(-1);
+      result[symbol] = match?.o ?? null;
+    });
+
+    return result;
+  }, [bars1D.data, simTime]);
 
   useEffect(() => {
-    setChartState({ symbol: selectedSymbol, openPrice });
-  }, [selectedSymbol, openPrice, setChartState]);
+    setChartState({ symbol: selectedSymbol, openPrices: allOpenPrices });
+  }, [selectedSymbol, allOpenPrices, setChartState]);
 
   useEffect(() => {
     if (!containerRef.current || !data?.bars[selectedSymbol]) return;
@@ -231,7 +253,7 @@ export default function Chart({ setChartState }: ChartProps) {
         ))}
       </div>
       <div className="text-sm text-gray-600">
-        Open price: {openPrice ?? "N/A"}
+        Open price: {allOpenPrices[selectedSymbol] ?? "N/A"}
       </div>
       {isLoading ? (
         <div>Loading chart...</div>
@@ -240,6 +262,13 @@ export default function Chart({ setChartState }: ChartProps) {
       ) : (
         <div ref={containerRef} className="w-full h-full" />
       )}
+      {/* <div className="text-sm text-gray-600">
+        {Object.entries(allOpenPrices).map(([symbol, price]) => (
+          <div key={symbol}>
+            {symbol}: {price ?? "N/A"}
+          </div>
+        ))}
+      </div> */}
     </div>
   );
 }

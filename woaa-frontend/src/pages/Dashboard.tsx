@@ -20,16 +20,16 @@ import SimulationControls from "../components/SimulationControls";
 
 export interface ChartState {
   symbol: string;
-  openPrice: number | null;
+  openPrices: Record<string, number | null>;
 }
 
 export const ChartContext = createContext<{
   symbol: string;
-  openPrice: number | null;
+  openPrices: Record<string, number | null>;
   setChartState: (state: ChartState) => void;
 }>({
   symbol: "",
-  openPrice: null,
+  openPrices: {},
   setChartState: () => {},
 });
 
@@ -48,9 +48,8 @@ export default function Dashboard() {
 
   const [chartState, setChartState] = useState<ChartState>({
     symbol: "",
-    openPrice: null,
+    openPrices: {},
   });
-  
 
   const [commissionValue, setCommissionValue] = useState(0.5);
   const [commissionType, setCommissionType] = useState<"real" | "sim">("sim");

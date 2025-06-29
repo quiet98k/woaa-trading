@@ -1,20 +1,22 @@
 /**
- * @fileoverview Table component to display user trading positions with delete buttons for testing.
+ * @fileoverview Table component to display user trading positions,
+ * including bought-in (open) price and current price using ChartContext.
+ * Allows position deletion (for testing).
  */
 
-import React, { type JSX } from "react";
+import React, { type JSX, useContext } from "react";
 import { useMyPositions, useDeletePosition } from "../hooks/usePositions";
+import { ChartContext } from "../pages/Dashboard";
 
 /**
- * Table component to display a list of user positions.
- *
- * Fetches data internally and allows deletion for testing purposes.
+ * Table component to display a list of user positions with live open prices.
  *
  * @returns Rendered JSX element showing the position table or appropriate messages.
  */
 export function PositionTable(): JSX.Element {
   const { data: positions, isLoading } = useMyPositions();
-  const deleteMutation = useDeletePosition(); // ✅ Use the hook once
+  const deleteMutation = useDeletePosition();
+  const { openPrices } = useContext(ChartContext);
 
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id);
@@ -31,6 +33,7 @@ export function PositionTable(): JSX.Element {
               <th className="px-1 py-1">Symbol</th>
               <th className="px-1 py-1">Type</th>
               <th className="px-1 py-1">Open Price</th>
+              <th className="px-1 py-1">Current Price</th>
               <th className="px-1 py-1">Shares</th>
               <th className="px-1 py-1">Status</th>
               <th className="px-1 py-1">P&amp;L</th>
@@ -38,28 +41,46 @@ export function PositionTable(): JSX.Element {
             </tr>
           </thead>
           <tbody>
-            {positions.map((p) => (
-              <tr key={p.id} className="border-b">
-                <td className="px-1 py-1">{p.symbol}</td>
-                <td className="px-1 py-1">{p.position_type}</td>
-                <td className="px-1 py-1">${p.open_price.toFixed(2)}</td>
-                <td className="px-1 py-1">{p.open_shares}</td>
-                <td className="px-1 py-1">{p.status}</td>
-                <td className="px-1 py-1">
-                  {p.status === "closed"
-                    ? `$${p.realized_pl?.toFixed(2) ?? "0.00"}`
-                    : "—"}
-                </td>
-                <td className="px-1 py-1">
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="text-red-500 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {positions.map((p) => {
+              const currentPrice = openPrices[p.symbol] ?? null;
+              const unrealizedPL =
+                currentPrice !== null && p.status === "open"
+                  ? (currentPrice - p.open_price) *
+                    (p.position_type === "Long"
+                      ? p.open_shares
+                      : -p.open_shares)
+                  : null;
+
+              return (
+                <tr key={p.id} className="border-b">
+                  <td className="px-1 py-1">{p.symbol}</td>
+                  <td className="px-1 py-1">{p.position_type}</td>
+                  <td className="px-1 py-1">${p.open_price.toFixed(2)}</td>
+                  <td className="px-1 py-1">
+                    {currentPrice !== null
+                      ? `$${currentPrice.toFixed(2)}`
+                      : "—"}
+                  </td>
+                  <td className="px-1 py-1">{p.open_shares}</td>
+                  <td className="px-1 py-1">{p.status}</td>
+                  <td className="px-1 py-1">
+                    {p.status === "closed"
+                      ? `$${p.realized_pl?.toFixed(2) ?? "0.00"}`
+                      : unrealizedPL !== null
+                      ? `$${unrealizedPL.toFixed(2)}`
+                      : "—"}
+                  </td>
+                  <td className="px-1 py-1">
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      className="text-red-500 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       ) : (
