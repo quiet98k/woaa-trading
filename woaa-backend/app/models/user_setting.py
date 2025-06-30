@@ -41,6 +41,8 @@ class UserSetting(Base):
 
     margin_rate = Column(Float, default=0.0)
     margin_type = Column(Enum(SettingType), default=SettingType.SIM)
+    borrowed_margin = Column(Float, default=0.0, nullable=False)
+
 
     overnight_fee_rate = Column(Float, default=0.0)
     overnight_fee_type = Column(Enum(SettingType), default=SettingType.SIM)

@@ -20,6 +20,7 @@ class UserSettingBase(BaseModel):
 
     margin_rate: float
     margin_type: Literal["real", "sim"]
+    borrowed_margin: float
 
     overnight_fee_rate: float
     overnight_fee_type: Literal["real", "sim"]

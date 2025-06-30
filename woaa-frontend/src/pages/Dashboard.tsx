@@ -13,6 +13,7 @@ import { PositionTable } from "../components/positionTable";
 import SharesInput from "../components/SharesInput";
 import SimulationControls from "../components/SimulationControls";
 import { AdminSettingsPanel } from "../components/AdminControls";
+import { MarginManager } from "../components/MarginManager";
 
 export interface ChartState {
   symbol: string;
@@ -229,14 +230,7 @@ export default function Dashboard() {
 
               {/* Action 3 */}
               <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex items-center justify-center">
-                <div className="flex gap-4">
-                  <button className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-4 py-1 rounded-md focus:outline-none active:outline-none">
-                    Power Up
-                  </button>
-                  <button className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-4 py-1 rounded-md focus:outline-none active:outline-none">
-                    Flatten
-                  </button>
-                </div>
+                <MarginManager />
               </div>
             </div>
           </div>
