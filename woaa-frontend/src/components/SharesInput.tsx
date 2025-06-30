@@ -1,12 +1,13 @@
 /**
  * @fileoverview Input component for specifying number of shares to trade
- * using the latest open price and selected symbol from the ChartContext.
+ * using the latest open price, user settings, and selected symbol from the ChartContext.
  */
 
 import React, { useState, type JSX, useContext } from "react";
 import { useCreatePosition } from "../hooks/usePositions";
 import { useCreateTransaction } from "../hooks/useTransactions";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
+import { useUserSettings } from "../hooks/useUserSettings";
 import { ChartContext } from "../pages/Dashboard";
 
 /**
@@ -19,21 +20,36 @@ export default function SharesInput(): JSX.Element {
   const createTransaction = useCreateTransaction();
   const createPosition = useCreatePosition();
   const { data: user } = useMe();
-  const { symbol, openPrices } = useContext(ChartContext);
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
+  const { data: settings } = useUserSettings();
+  const { symbol, openPrices } = useContext(ChartContext);
 
   const openPrice = openPrices[symbol];
 
-  if (!symbol || openPrice === null || openPrice === undefined) {
-    return <div>Loading symbol and price...</div>;
+  if (!symbol || openPrice === null || openPrice === undefined || !settings) {
+    return <div>Loading symbol, price, or settings...</div>;
   }
 
   const handleTrade = (type: "Long" | "Short") => {
     if (!user) return;
-    const cost = shares * openPrice;
 
-    if ((user.sim_balance ?? 0) < cost) {
-      alert("Insufficient simulated balance.");
+    const baseCost = shares * openPrice;
+    const commission = baseCost * settings.commission_rate;
+    const totalSimCost = type === "Long" ? -baseCost : baseCost;
+
+    const newSimBalance = (user.sim_balance ?? 0) + totalSimCost;
+    const newRealBalance =
+      (user.real_balance ?? 0) -
+      (settings.commission_type === "real" ? commission : 0);
+    const newSimBalanceAfterCommission =
+      newSimBalance - (settings.commission_type === "sim" ? commission : 0);
+
+    if (newSimBalanceAfterCommission < 0) {
+      alert("Insufficient simulated balance (including commission).");
+      return;
+    }
+    if (newRealBalance < 0) {
+      alert("Insufficient real balance to cover commission.");
       return;
     }
 
@@ -44,8 +60,8 @@ export default function SharesInput(): JSX.Element {
         price: openPrice,
         action: type === "Long" ? "buy" : "short",
         notes: "",
-        commission_charged: 0,
-        commission_type: "sim",
+        commission_charged: parseFloat(commission.toFixed(2)),
+        commission_type: settings.commission_type,
       },
       {
         onSuccess: () => {
@@ -57,11 +73,8 @@ export default function SharesInput(): JSX.Element {
           });
 
           updateBalances.mutate({
-            sim_balance: parseFloat(
-              (
-                (user.sim_balance ?? 0) + (type === "Long" ? -cost : cost)
-              ).toFixed(2)
-            ),
+            sim_balance: parseFloat(newSimBalanceAfterCommission.toFixed(2)),
+            real_balance: parseFloat(newRealBalance.toFixed(2)),
           });
         },
       }
