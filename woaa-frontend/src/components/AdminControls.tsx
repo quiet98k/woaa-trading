@@ -2,7 +2,7 @@
  * @fileoverview Admin settings panel with full logic and a modal to show current settings.
  */
 
-import React, { useEffect, useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import {
   useUserSettings,
   useUpdateUserSettings,
@@ -91,19 +91,19 @@ export function AdminSettingsPanel(): JSX.Element {
     });
   };
 
-  const formattedSettings = {
-    commission_rate: commissionValue,
-    commission_type: commissionType,
-    holding_cost_rate: holdingCostValue,
-    holding_cost_type: holdingCostType,
-    margin_limit: marginValue,
-    gain_rate_threshold: gainThreshold,
-    drawdown_rate_threshold: drawdownThreshold,
-    overnight_fee_rate: overnightFeeValue,
-    overnight_fee_type: overnightFeeType,
-    power_up_fee: powerUpValue,
-    power_up_type: powerUpType,
-  };
+  // const formattedSettings = {
+  //   commission_rate: commissionValue,
+  //   commission_type: commissionType,
+  //   holding_cost_rate: holdingCostValue,
+  //   holding_cost_type: holdingCostType,
+  //   margin_limit: marginValue,
+  //   gain_rate_threshold: gainThreshold,
+  //   drawdown_rate_threshold: drawdownThreshold,
+  //   overnight_fee_rate: overnightFeeValue,
+  //   overnight_fee_type: overnightFeeType,
+  //   power_up_fee: powerUpValue,
+  //   power_up_type: powerUpType,
+  // };
 
   return (
     <>

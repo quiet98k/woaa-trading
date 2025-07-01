@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: woaa_db
+      POSTGRES_USER: woaa_user
+      POSTGRES_PASSWORD: le918eejOHzK
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./woaa-backend
+    ports:
+      - "8000:80"
+    depends_on:
+      - db
+    env_file:
+      - ./woaa-backend/.env
+    environment:
+      DATABASE_URL: postgres://woaa_user:le918eejOHzK@db:$5432/woaa_db
+    restart: always
+
+  frontend:
+    build: ./woaa-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  postgres-data:

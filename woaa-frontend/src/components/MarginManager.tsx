@@ -2,7 +2,7 @@
  * @fileoverview Simple margin manager to show borrowed margin and allow borrowing or paying back a specific amount.
  */
 
-import React, { useState, type JSX } from "react";
+import { useState, type JSX } from "react";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import {
   useUserSettings,

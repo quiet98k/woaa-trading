@@ -6,7 +6,7 @@
 import Chart from "../components/chart";
 
 import { createContext, useState } from "react";
-import { useMe, useUpdateUserBalances } from "../hooks/useUser";
+import { useMe } from "../hooks/useUser";
 import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
 import { PositionTable } from "../components/positionTable";
@@ -37,12 +37,6 @@ export default function Dashboard() {
   // ✅ Fetch authenticated user using React Query
   const { data: user, isLoading, isError } = useMe();
 
-  const [isEditingSim, setIsEditingSim] = useState(false);
-  const [isEditingReal, setIsEditingReal] = useState(false);
-  const [newSimValue, setNewSimValue] = useState(user?.sim_balance || 0);
-  const [newRealValue, setNewRealValue] = useState(user?.real_balance || 0);
-
-  const updateUser = useUpdateUserBalances(user?.id ?? ""); // assumes user is loaded
 
   const [chartState, setChartState] = useState<ChartState>({
     symbol: "",

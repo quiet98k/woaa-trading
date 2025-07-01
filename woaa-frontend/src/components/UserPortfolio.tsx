@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";

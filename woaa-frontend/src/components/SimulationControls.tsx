@@ -1,4 +1,4 @@
-import React, { useEffect, useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import { useSimTime } from "../hooks/useSimTimeSocket";
 import {
   useUserSettings,

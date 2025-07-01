@@ -1,4 +1,4 @@
-import React, { type JSX, useContext, useState } from "react";
+import { type JSX, useContext, useState } from "react";
 import {
   useMyPositions,
   useDeletePosition,

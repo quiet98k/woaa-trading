@@ -3,7 +3,7 @@
  * using the latest open price, user settings, and selected symbol from the ChartContext.
  */
 
-import React, { useState, type JSX, useContext } from "react";
+import { useState, type JSX, useContext } from "react";
 import { useCreatePosition } from "../hooks/usePositions";
 import { useCreateTransaction } from "../hooks/useTransactions";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
