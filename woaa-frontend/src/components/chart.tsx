@@ -74,6 +74,7 @@ export default function Chart({ setChartState }: ChartProps) {
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const lastSimMinute = useRef<number | null>(null);
+  const lastCandleTimeRef = useRef<UTCTimestamp | null>(null);
 
   const [selectedSymbol, setSelectedSymbol] = useState("AAPL");
   const [selectedRange, setSelectedRange] = useState<TimeOption>("1D");
@@ -197,6 +198,10 @@ export default function Chart({ setChartState }: ChartProps) {
       }));
 
     candlestickSeries.setData(transformed);
+    lastCandleTimeRef.current =
+      transformed.length > 0
+        ? (transformed.at(-1)!.time as UTCTimestamp)
+        : null;
     chart.timeScale().fitContent();
   }, [data, selectedSymbol]);
 
@@ -214,15 +219,23 @@ export default function Chart({ setChartState }: ChartProps) {
     const visibleBars = bars.filter((bar) => new Date(bar.t) <= simTime);
     const lastVisible = visibleBars.at(-1);
 
-    if (lastVisible) {
-      const updatedBar: CandlestickData = {
-        time: (new Date(lastVisible.t).getTime() / 1000) as UTCTimestamp,
-        open: lastVisible.o,
-        high: lastVisible.h,
-        low: lastVisible.l,
-        close: lastVisible.c,
-      };
+    if (!lastVisible) return;
+
+    const updatedBar: CandlestickData = {
+      time: Math.floor(
+        new Date(lastVisible.t).getTime() / 1000
+      ) as UTCTimestamp,
+      open: lastVisible.o,
+      high: lastVisible.h,
+      low: lastVisible.l,
+      close: lastVisible.c,
+    };
+
+    const lastTime = lastCandleTimeRef.current;
+
+    if (lastTime !== null && Number(updatedBar.time) >= Number(lastTime)) {
       seriesRef.current.update(updatedBar);
+      lastCandleTimeRef.current = Number(updatedBar.time) as UTCTimestamp;
     }
   }, [simTime, data, selectedSymbol]);
 

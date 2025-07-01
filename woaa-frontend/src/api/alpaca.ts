@@ -37,8 +37,8 @@ async function fetchMarketCalendar(
 
   const response = await fetch(url.toString(), {
     headers: {
-      "APCA-API-KEY-ID": import.meta.env.VITE_ALPACA_API_KEY!,
-      "APCA-API-SECRET-KEY": import.meta.env.VITE_ALPACA_SECRET_KEY!,
+      "APCA-API-KEY-ID": import.meta.env.VITE_ALPACA_API_KEY,
+      "APCA-API-SECRET-KEY": import.meta.env.VITE_ALPACA_SECRET_KEY,
     },
   });
 

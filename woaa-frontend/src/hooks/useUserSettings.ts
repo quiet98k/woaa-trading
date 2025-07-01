@@ -54,7 +54,6 @@ export function useUpdateStartTime() {
   });
 }
 
-
 /**
  * Admin-only: Fetch settings for a specific user.
  */
@@ -74,6 +73,7 @@ export function useUpdateUserSettings(userId: string) {
   return useMutation({
     mutationFn: (updates: any) => updateUserSettings(userId, updates),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", "me"] });
       queryClient.invalidateQueries({ queryKey: ["settings", userId] });
     },
   });

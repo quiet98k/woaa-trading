@@ -25,7 +25,7 @@ def test_create_valid_user_setting(db):
         commission_type=SettingType.REAL,
         holding_cost_rate=0.002,
         holding_cost_type=SettingType.REAL,
-        margin_rate=0.05,
+        margin_limit=0.05,
         margin_type=SettingType.SIM,
         overnight_fee_rate=0.01,
         overnight_fee_type=SettingType.SIM,

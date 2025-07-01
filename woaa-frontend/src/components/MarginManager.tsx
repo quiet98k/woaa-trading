@@ -1,6 +1,5 @@
 /**
- * @fileoverview Component to manage borrowed margin using leverage multiplier (1x–10x).
- * Includes payback and testing-only delete button. Two-column layout.
+ * @fileoverview Simple margin manager to show borrowed margin and allow borrowing or paying back a specific amount.
  */
 
 import React, { useState, type JSX } from "react";
@@ -11,8 +10,7 @@ import {
 } from "../hooks/useUserSettings";
 
 /**
- * Component to view and manage borrowed margin using leverage multiplier (1x–10x).
- * Fills parent space and uses a two-column layout with controls on the right.
+ * Simple MarginManager to show and control borrowed margin via amount input.
  *
  * @returns JSX.Element
  */
@@ -22,7 +20,8 @@ export function MarginManager(): JSX.Element {
   const updateSettings = useUpdateUserSettings(user?.id ?? "");
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
 
-  const [multiplier, setMultiplier] = useState<number>(1);
+  const [borrowAmount, setBorrowAmount] = useState<number>(0);
+  const [paybackAmount, setPaybackAmount] = useState<number>(0);
 
   if (!user || !settings) {
     return (
@@ -34,113 +33,105 @@ export function MarginManager(): JSX.Element {
 
   const simBalance = user.sim_balance;
   const borrowed = settings.borrowed_margin;
-  const baseBalance = simBalance - borrowed;
-  const targetBorrowed = baseBalance * (multiplier - 1);
-  const targetSimBalance = baseBalance + targetBorrowed;
+  const marginLimit = settings.margin_limit;
+  const remainingBorrowable = marginLimit - borrowed;
 
-  const handleApply = () => {
-    if (multiplier < 1 || multiplier > 10) return;
-    console.log("borrowed_margin:", targetBorrowed);
+  const handleBorrow = () => {
+    if (borrowAmount <= 0 || borrowAmount > remainingBorrowable) return;
 
     updateSettings.mutate({
       ...settings,
-      borrowed_margin: targetBorrowed,
+      borrowed_margin: borrowed + borrowAmount,
     });
 
     updateBalances.mutate({
-      sim_balance: targetSimBalance,
+      sim_balance: simBalance + borrowAmount,
       real_balance: user.real_balance,
     });
+
+    setBorrowAmount(0);
   };
 
   const handlePayback = () => {
-    if (borrowed <= 0 || simBalance < borrowed) return;
+    if (
+      paybackAmount <= 0 ||
+      paybackAmount > borrowed ||
+      simBalance < paybackAmount
+    )
+      return;
 
     updateSettings.mutate({
       ...settings,
-      borrowed_margin: 0,
+      borrowed_margin: borrowed - paybackAmount,
     });
 
     updateBalances.mutate({
-      sim_balance: simBalance - borrowed,
+      sim_balance: simBalance - paybackAmount,
       real_balance: user.real_balance,
     });
-  };
 
-  const handleDeleteMargin = () => {
-    // FOR TESTING ONLY
-    updateSettings.mutate({
-      ...settings,
-      borrowed_margin: 0,
-    });
-    // No change to sim balance
+    setPaybackAmount(0);
   };
 
   return (
-    <div className="w-full h-full p-4 flex flex-col text-black">
+    <div className="w-full h-full p-4 text-black">
       <h2 className="text-xl font-semibold mb-4">Margin Manager</h2>
 
-      <div className="flex flex-1 flex-col md:flex-row gap-6 overflow-auto">
-        {/* Left: Info */}
-        <div className="flex-1 space-y-2 text-sm">
-          <p>
-            Base Balance: <strong>${baseBalance.toFixed(2)}</strong>
-          </p>
-          <p>
-            Sim Balance: <strong>${simBalance.toFixed(2)}</strong>
-          </p>
-          <p>
-            Borrowed Margin: <strong>${borrowed.toFixed(2)}</strong>
-          </p>
-          <p>
-            Selected Leverage: <strong>{multiplier}×</strong>
-          </p>
-          <p>
-            New Borrowed: <strong>${targetBorrowed.toFixed(2)}</strong>
-          </p>
-          <p>
-            New Sim Balance: <strong>${targetSimBalance.toFixed(2)}</strong>
-          </p>
+      <div className="space-y-3 text-sm">
+        <p>
+          Margin Limit: <strong>${marginLimit.toFixed(2)}</strong>
+        </p>
+        <p>
+          Current Borrowed Margin: <strong>${borrowed.toFixed(2)}</strong>
+        </p>
+        <p>
+          Remaining Borrowable:{" "}
+          <strong>${remainingBorrowable.toFixed(2)}</strong>
+        </p>
+      </div>
 
-          <div className="mt-4">
-            <label className="block text-sm font-medium mb-1">
-              Select Leverage
-            </label>
-            <select
-              value={multiplier}
-              onChange={(e) => setMultiplier(Number(e.target.value))}
-              className="w-full rounded border px-2 py-1"
-            >
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((x) => (
-                <option key={x} value={x}>
-                  {x}×
-                </option>
-              ))}
-            </select>
-          </div>
+      <div className="mt-6 space-y-6 max-w-sm">
+        {/* Borrow */}
+        <div>
+          <label className="block mb-1 text-sm font-medium">
+            Amount to Borrow
+          </label>
+          <input
+            type="number"
+            className="w-full border rounded px-2 py-1"
+            value={borrowAmount}
+            min={0}
+            max={remainingBorrowable}
+            step={100}
+            onChange={(e) => setBorrowAmount(Number(e.target.value))}
+          />
+          <button
+            onClick={handleBorrow}
+            className="mt-2 w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded"
+          >
+            Borrow
+          </button>
         </div>
 
-        {/* Right: Buttons */}
-        <div className="flex flex-col justify-start gap-2 w-full md:w-48">
-          <button
-            onClick={handleApply}
-            className="rounded bg-indigo-600 text-white py-2 hover:bg-indigo-700"
-          >
-            Apply {multiplier}× Margin
-          </button>
-
+        {/* Payback */}
+        <div>
+          <label className="block mb-1 text-sm font-medium">
+            Amount to Pay Back
+          </label>
+          <input
+            type="number"
+            className="w-full border rounded px-2 py-1"
+            value={paybackAmount}
+            min={0}
+            max={borrowed}
+            step={100}
+            onChange={(e) => setPaybackAmount(Number(e.target.value))}
+          />
           <button
             onClick={handlePayback}
-            className="rounded bg-blue-500 text-white py-2 hover:bg-blue-600"
+            className="mt-2 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded"
           >
             Pay Back
-          </button>
-
-          <button
-            onClick={handleDeleteMargin}
-            className="rounded bg-red-500 text-white py-2 hover:bg-red-600"
-          >
-            Delete Margin (Test)
           </button>
         </div>
       </div>

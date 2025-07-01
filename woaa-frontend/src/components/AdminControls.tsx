@@ -14,6 +14,8 @@ import * as Dialog from "@radix-ui/react-dialog";
  * AdminSettingsPanel component to control all user setting parameters.
  */
 export function AdminSettingsPanel(): JSX.Element {
+  const [appliedSettings, setAppliedSettings] = useState<any | null>(null);
+
   const { data: user } = useMe();
   const userId = user?.id;
 
@@ -27,7 +29,6 @@ export function AdminSettingsPanel(): JSX.Element {
   const [holdingCostType, setHoldingCostType] = useState<"real" | "sim">("sim");
 
   const [marginValue, setMarginValue] = useState(0);
-  const [marginType, setMarginType] = useState<"real" | "sim">("sim");
 
   const [gainThreshold, setGainThreshold] = useState(0);
   const [drawdownThreshold, setDrawdownThreshold] = useState(0);
@@ -48,8 +49,7 @@ export function AdminSettingsPanel(): JSX.Element {
       setCommissionType(settings.commission_type);
       setHoldingCostValue(settings.holding_cost_rate);
       setHoldingCostType(settings.holding_cost_type);
-      setMarginValue(settings.margin_rate);
-      setMarginType(settings.margin_type);
+      setMarginValue(settings.margin_limit);
       setGainThreshold(settings.gain_rate_threshold);
       setDrawdownThreshold(settings.drawdown_rate_threshold);
       setOvernightFeeValue(settings.overnight_fee_rate);
@@ -60,25 +60,33 @@ export function AdminSettingsPanel(): JSX.Element {
   }, [settings]);
 
   const handleApply = () => {
-    if (!userId) return;
-    updateSettings.mutate({
+    if (!userId || !settings) return;
+
+    const payload = {
       commission_rate: commissionValue,
       commission_type: commissionType,
       holding_cost_rate: holdingCostValue,
       holding_cost_type: holdingCostType,
-      margin_rate: marginValue,
-      margin_type: marginType,
+      margin_limit: marginValue,
+      borrowed_margin: settings.borrowed_margin,
       gain_rate_threshold: gainThreshold,
       drawdown_rate_threshold: drawdownThreshold,
       overnight_fee_rate: overnightFeeValue,
       overnight_fee_type: overnightFeeType,
       power_up_fee: powerUpValue,
       power_up_type: powerUpType,
-      start_time: settings?.start_time ?? new Date(),
-      speed: settings?.speed ?? 1,
-      paused: settings?.paused ?? false,
-      sim_time: settings?.sim_time ?? new Date(),
+      start_time: settings.start_time,
+      speed: settings.speed,
+      paused: settings.paused,
+      sim_time: settings.sim_time,
       last_updated: new Date(),
+    };
+
+    updateSettings.mutate(payload, {
+      onSuccess: () => {
+        setAppliedSettings(payload);
+        setShowModal(true);
+      },
     });
   };
 
@@ -87,8 +95,7 @@ export function AdminSettingsPanel(): JSX.Element {
     commission_type: commissionType,
     holding_cost_rate: holdingCostValue,
     holding_cost_type: holdingCostType,
-    margin_rate: marginValue,
-    margin_type: marginType,
+    margin_limit: marginValue,
     gain_rate_threshold: gainThreshold,
     drawdown_rate_threshold: drawdownThreshold,
     overnight_fee_rate: overnightFeeValue,
@@ -130,14 +137,10 @@ export function AdminSettingsPanel(): JSX.Element {
           label="Margin"
           value={marginValue}
           onChange={setMarginValue}
-          unit="x"
-          toggleType={marginType}
-          onToggle={() =>
-            setMarginType((prev) => (prev === "real" ? "sim" : "real"))
-          }
+          unit=""
           area="b"
-          max={10}
-          step={0.1}
+          max={100000000}
+          step={1000}
         />
 
         <div
@@ -222,9 +225,17 @@ export function AdminSettingsPanel(): JSX.Element {
           className="flex items-center justify-between px-4"
           style={{ gridArea: "g" }}
         >
-          {/* <Dialog.Root open={showModal} onOpenChange={setShowModal}>
+          <Dialog.Root open={showModal} onOpenChange={setShowModal}>
             <Dialog.Trigger asChild>
-              <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded-md text-sm">
+              <button
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded-md text-sm"
+                onClick={() => {
+                  if (settings) {
+                    setAppliedSettings(settings);
+                    setShowModal(true);
+                  }
+                }}
+              >
                 Show Current Settings
               </button>
             </Dialog.Trigger>
@@ -232,10 +243,13 @@ export function AdminSettingsPanel(): JSX.Element {
               <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
               <Dialog.Content className="fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-md p-6 shadow-lg w-[90vw] max-w-md max-h-[80vh] overflow-auto">
                 <Dialog.Title className="text-lg font-medium mb-2">
-                  Current Admin Settings
+                  Current User Settings
                 </Dialog.Title>
+                <Dialog.Description className="text-sm text-gray-500 mb-4">
+                  Review the settings currently applied to this user.
+                </Dialog.Description>
                 <pre className="text-xs bg-gray-100 p-3 rounded whitespace-pre-wrap break-all text-black">
-                  {JSON.stringify(formattedSettings, null, 2)}
+                  {JSON.stringify(appliedSettings, null, 2)}
                 </pre>
                 <div className="mt-4 flex justify-end">
                   <Dialog.Close asChild>
@@ -246,7 +260,7 @@ export function AdminSettingsPanel(): JSX.Element {
                 </div>
               </Dialog.Content>
             </Dialog.Portal>
-          </Dialog.Root> */}
+          </Dialog.Root>
 
           <button
             onClick={handleApply}

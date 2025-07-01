@@ -39,8 +39,7 @@ class UserSetting(Base):
     holding_cost_rate = Column(Float, default=0.0)
     holding_cost_type = Column(Enum(SettingType), default=SettingType.SIM)
 
-    margin_rate = Column(Float, default=0.0)
-    margin_type = Column(Enum(SettingType), default=SettingType.SIM)
+    margin_limit = Column(Float, default=0.0)
     borrowed_margin = Column(Float, default=0.0, nullable=False)
 
 

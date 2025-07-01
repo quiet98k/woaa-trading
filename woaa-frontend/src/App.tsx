@@ -17,6 +17,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="*" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/test-data" element={<AlpacaTest />} />
       </Routes>
     </Router>
   );

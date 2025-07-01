@@ -18,8 +18,7 @@ class UserSettingBase(BaseModel):
     holding_cost_rate: float
     holding_cost_type: Literal["real", "sim"]
 
-    margin_rate: float
-    margin_type: Literal["real", "sim"]
+    margin_limit: float
     borrowed_margin: float
 
     overnight_fee_rate: float

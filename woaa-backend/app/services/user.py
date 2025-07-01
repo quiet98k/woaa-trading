@@ -25,7 +25,7 @@ async def create_default_user_setting(db: AsyncSession, user_id: UUID) -> UserSe
         commission_type=SettingType.SIM,
         holding_cost_rate=0.0005,
         holding_cost_type=SettingType.SIM,
-        margin_rate=0.5,
+        margin_limit=0,
         margin_type=SettingType.SIM,
         overnight_fee_rate=0.0003,
         overnight_fee_type=SettingType.SIM,

@@ -75,6 +75,7 @@ export async function updateUserSettings(
   userId: string,
   updates: any
 ): Promise<any> {
+  console.log("updates", updates);
   const res = await fetch(`${BASE_URL}/user-settings/${userId}`, {
     method: "PUT",
     headers,
