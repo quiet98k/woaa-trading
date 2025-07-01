@@ -6,7 +6,8 @@ import {
   useUpdatePause,
   useUpdateStartTime,
 } from "../hooks/useUserSettings";
-import { useMe } from "../hooks/useUser";
+import { useMe, useUpdateUserBalances } from "../hooks/useUser";
+import { useMyPositions } from "../hooks/usePositions";
 
 /**
  * Component that renders simulation controls and shows current sim_time.
@@ -29,6 +30,46 @@ export default function SimulationControls(): JSX.Element {
   const [localSpeed, setLocalSpeed] = useState(1);
   const [isPaused, setIsPaused] = useState(false);
 
+  const { data: positions } = useMyPositions();
+  const updateBalances = useUpdateUserBalances(user?.id ?? "");
+  const [lastSimDay, setLastSimDay] = useState<string | null>(null);
+
+  const triggerEndOfDayCharges = () => {
+    if (!user || !settings || !positions) return;
+
+    let newSim = user.sim_balance;
+    let newReal = user.real_balance;
+
+    // Holding cost for each open position
+    const openPositions = positions.filter((p) => p.status === "open");
+    const holdingCost = openPositions.length * settings.holding_cost_rate;
+
+    // Overnight flat fee if borrowed
+    const overnightFee =
+      settings.borrowed_margin > 0 ? settings.overnight_fee_rate : 0;
+
+    // Apply fees to balances
+    if (settings.holding_cost_type === "real") {
+      newReal -= holdingCost;
+    } else {
+      newSim -= holdingCost;
+    }
+
+    if (overnightFee > 0) {
+      if (settings.overnight_fee_type === "real") {
+        newReal -= overnightFee;
+      } else {
+        newSim -= overnightFee;
+      }
+    }
+
+    // Update backend balances
+    updateBalances.mutate({
+      sim_balance: newSim,
+      real_balance: newReal,
+    });
+  };
+
   useEffect(() => {
     if (settings) {
       const startDate = settings.start_time?.split("T")[0] ?? "";
@@ -38,6 +79,18 @@ export default function SimulationControls(): JSX.Element {
       setIsPaused(settings.paused ?? false);
     }
   }, [settings]);
+
+  useEffect(() => {
+    if (!simTime) return;
+
+    const currentDay = new Date(simTime).toISOString().slice(0, 10); // YYYY-MM-DD
+
+    if (lastSimDay !== null && currentDay !== lastSimDay) {
+      triggerEndOfDayCharges(); // ⏱️ Only once per new sim day
+    }
+
+    setLastSimDay(currentDay);
+  }, [simTime]);
 
   const handlePauseToggle = () => {
     const newPaused = !isPaused;
@@ -131,6 +184,13 @@ export default function SimulationControls(): JSX.Element {
           disabled={!isStartDateChanged}
         >
           Restart
+        </button>
+
+        <button
+          onClick={triggerEndOfDayCharges}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md text-xs"
+        >
+          Apply End of Day Charges
         </button>
       </div>
     </div>

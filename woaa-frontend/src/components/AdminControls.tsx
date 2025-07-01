@@ -59,6 +59,8 @@ export function AdminSettingsPanel(): JSX.Element {
     }
   }, [settings]);
 
+  
+
   const handleApply = () => {
     if (!userId || !settings) return;
 
@@ -183,28 +185,28 @@ export function AdminSettingsPanel(): JSX.Element {
           label="Holding Cost"
           value={holdingCostValue}
           onChange={setHoldingCostValue}
-          unit="%"
+          unit=""
           toggleType={holdingCostType}
           onToggle={() =>
             setHoldingCostType((prev) => (prev === "real" ? "sim" : "real"))
           }
           area="d"
           max={10}
-          step={0.1}
+          step={0.5}
         />
 
         <SettingCard
           label="Overnight Fee"
           value={overnightFeeValue}
           onChange={setOvernightFeeValue}
-          unit="%"
+          unit=""
           toggleType={overnightFeeType}
           onToggle={() =>
             setOvernightFeeType((prev) => (prev === "real" ? "sim" : "real"))
           }
           area="e"
           max={50}
-          step={0.5}
+          step={1}
         />
 
         <SettingCard
