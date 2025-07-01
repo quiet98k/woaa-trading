@@ -43,7 +43,7 @@ async def create_default_user_setting(db: AsyncSession, user_id: UUID) -> UserSe
         power_up_type=SettingType.SIM,
         start_time=datetime(2024, 5, 1),
         sim_time=datetime(2024, 5, 1),
-        speed=1.0,
+        speed=2.0,
         paused=False,
     )
     db.add(default_setting)

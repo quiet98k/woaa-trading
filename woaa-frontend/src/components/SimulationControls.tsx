@@ -129,9 +129,14 @@ export default function SimulationControls(): JSX.Element {
         )}
       </div>
 
-      {/* Speed Control */}
+      {/* Speed Control with current speed display */}
       <div className="flex items-center justify-between gap-2">
-        <label className="text-gray-600 w-1/2">Simulation Speed</label>
+        <label className="text-gray-600 w-1/2">
+          Simulation Speed
+          <span className="ml-2 text-xs text-gray-400">
+            (current: {localSpeed}x)
+          </span>
+        </label>
         <select
           className="flex-1 bg-white border border-gray-300 rounded-md px-2 py-1 text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={localSpeed}
