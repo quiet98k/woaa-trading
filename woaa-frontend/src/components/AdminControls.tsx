@@ -4,23 +4,23 @@
 
 import React, { useEffect, useState, type JSX } from "react";
 import {
-  useUserSettingsById,
+  useUserSettings,
   useUpdateUserSettings,
 } from "../hooks/useUserSettings";
 import { useMe } from "../hooks/useUser";
 import * as Dialog from "@radix-ui/react-dialog";
 
 /**
- * AdminSettingsPanel component to control all user setting parameters.
+ * AdminSettingsPanel component to control all user setting parameters for the current user.
  */
 export function AdminSettingsPanel(): JSX.Element {
   const [appliedSettings, setAppliedSettings] = useState<any | null>(null);
+  const { data: settings } = useUserSettings();
 
   const { data: user } = useMe();
-  const userId = user?.id;
+  const updateSettings = useUpdateUserSettings(user?.id ?? "");
 
-  const { data: settings } = useUserSettingsById(userId ?? "");
-  const updateSettings = useUpdateUserSettings(userId ?? "");
+  const [initialSimBalance, setInitialSimBalance] = useState(10000);
 
   const [commissionValue, setCommissionValue] = useState(0);
   const [commissionType, setCommissionType] = useState<"real" | "sim">("sim");
@@ -29,7 +29,6 @@ export function AdminSettingsPanel(): JSX.Element {
   const [holdingCostType, setHoldingCostType] = useState<"real" | "sim">("sim");
 
   const [marginValue, setMarginValue] = useState(0);
-
   const [gainThreshold, setGainThreshold] = useState(0);
   const [drawdownThreshold, setDrawdownThreshold] = useState(0);
 
@@ -50,6 +49,7 @@ export function AdminSettingsPanel(): JSX.Element {
       setHoldingCostValue(settings.holding_cost_rate);
       setHoldingCostType(settings.holding_cost_type);
       setMarginValue(settings.margin_limit);
+      setInitialSimBalance(settings.initial_sim_balance);
       setGainThreshold(settings.gain_rate_threshold);
       setDrawdownThreshold(settings.drawdown_rate_threshold);
       setOvernightFeeValue(settings.overnight_fee_rate);
@@ -59,10 +59,8 @@ export function AdminSettingsPanel(): JSX.Element {
     }
   }, [settings]);
 
-  
-
   const handleApply = () => {
-    if (!userId || !settings) return;
+    if (!settings) return;
 
     const payload = {
       commission_rate: commissionValue,
@@ -77,6 +75,7 @@ export function AdminSettingsPanel(): JSX.Element {
       overnight_fee_type: overnightFeeType,
       power_up_fee: powerUpValue,
       power_up_type: powerUpType,
+      initial_sim_balance: initialSimBalance,
       start_time: settings.start_time,
       speed: settings.speed,
       paused: settings.paused,
@@ -150,6 +149,20 @@ export function AdminSettingsPanel(): JSX.Element {
           style={{ gridArea: "c" }}
         >
           <div className="font-medium text-center mb-2">Gain & Drawdown</div>
+
+          <div className="flex items-center gap-2 text-xs mb-2">
+            <span className="w-[80px] text-gray-500">Init. Balance</span>
+            <input
+              type="number"
+              className="w-full border rounded px-2 py-1 text-sm text-right"
+              min={0}
+              step={100}
+              value={initialSimBalance}
+              onChange={(e) => setInitialSimBalance(parseFloat(e.target.value))}
+            />
+            <span className="text-xs text-gray-500">$</span>
+          </div>
+
           <div className="flex items-center gap-2 text-xs">
             <span className="w-[80px] text-gray-500">Gain Threshold</span>
             <input
@@ -162,6 +175,9 @@ export function AdminSettingsPanel(): JSX.Element {
               onChange={(e) => setGainThreshold(parseFloat(e.target.value))}
             />
             <span className="w-10 text-right">{gainThreshold.toFixed(0)}%</span>
+          </div>
+          <div className="pl-[85px] text-[10px] text-gray-500 mb-1">
+            ≈ ${((initialSimBalance * gainThreshold) / 100).toFixed(2)} to win
           </div>
 
           <div className="flex items-center gap-2 text-xs mt-2">
@@ -178,6 +194,10 @@ export function AdminSettingsPanel(): JSX.Element {
             <span className="w-10 text-right">
               {drawdownThreshold.toFixed(0)}%
             </span>
+          </div>
+          <div className="pl-[85px] text-[10px] text-gray-500">
+            ≈ ${((initialSimBalance * drawdownThreshold) / 100).toFixed(2)} to
+            lose
           </div>
         </div>
 

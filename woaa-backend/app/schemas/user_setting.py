@@ -14,6 +14,8 @@ class UserSettingBase(BaseModel):
     """
     commission_rate: float
     commission_type: Literal["real", "sim"]
+    
+    initial_sim_balance: float
 
     holding_cost_rate: float
     holding_cost_type: Literal["real", "sim"]

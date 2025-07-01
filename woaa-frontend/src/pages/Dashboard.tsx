@@ -14,6 +14,7 @@ import SharesInput from "../components/SharesInput";
 import SimulationControls from "../components/SimulationControls";
 import { AdminSettingsPanel } from "../components/AdminControls";
 import { MarginManager } from "../components/MarginManager";
+import { UserPortfolio } from "../components/UserPortfolio";
 
 export interface ChartState {
   symbol: string;
@@ -73,132 +74,7 @@ export default function Dashboard() {
         {/* User View */}
         <div className="w-full h-[70vh] border border-gray-400 p-2 bg-white rounded-lg shadow-sm flex flex-col gap-2">
           {/* User Portfolio */}
-          <div className="flex-1 border border-purple-400 p-2 rounded-md flex flex-col gap-2">
-            {/* User Info */}
-            {user && (
-              <div className="flex justify-between items-center text-xs text-gray-700 px-1">
-                <div className="flex flex-col">
-                  <div>
-                    <strong>User:</strong> {user.username}
-                  </div>
-                  <div>
-                    <strong>Email:</strong> {user.email}
-                  </div>
-                  <div>
-                    <strong>Role:</strong>{" "}
-                    {user.is_admin ? (
-                      <span className="text-red-600 font-semibold">Admin</span>
-                    ) : (
-                      <span className="text-gray-600">Regular User</span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    logout();
-                    navigate("/login");
-                  }}
-                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
-            {/* Balance Info */}
-            <div className="flex justify-between items-center gap-2 h-full">
-              {/* Simulated Value */}
-              <div className="flex-1 border border-green-300 bg-green-50 p-2 rounded-md shadow-sm flex items-center justify-between gap-2">
-                <span className="text-sm text-gray-600">Simulated Value</span>
-                {isEditingSim ? (
-                  <>
-                    <input
-                      type="number"
-                      className="w-24 px-2 py-1 text-sm text-black border rounded-md"
-                      value={newSimValue}
-                      placeholder={user?.sim_balance?.toString() ?? ""}
-                      onChange={(e) =>
-                        setNewSimValue(parseFloat(e.target.value))
-                      }
-                    />
-                    <button
-                      className="text-green-700 font-bold"
-                      onClick={() => {
-                        updateUser.mutate({ sim_balance: newSimValue });
-                        setIsEditingSim(false);
-                      }}
-                    >
-                      ✅
-                    </button>
-                    <button
-                      className="text-red-500 font-bold"
-                      onClick={() => setIsEditingSim(false)}
-                    >
-                      ❌
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-lg font-semibold text-green-700">
-                      ${user?.sim_balance?.toLocaleString() ?? "—"}
-                    </span>
-                    <button
-                      className="text-sm text-green-600 underline"
-                      onClick={() => {
-                        setNewSimValue(user?.sim_balance ?? 0);
-                        setIsEditingSim(true);
-                      }}
-                    >
-                      Edit
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Real Money */}
-              <div className="flex-1 border border-blue-300 bg-blue-50 p-2 rounded-md shadow-sm flex items-center justify-between gap-2">
-                <span className="text-sm text-gray-600">Real Money</span>
-                {isEditingReal ? (
-                  <>
-                    <input
-                      type="number"
-                      className="w-24 px-2 py-1 text-sm text-black border rounded-md"
-                      value={newRealValue}
-                      onChange={(e) =>
-                        setNewRealValue(parseFloat(e.target.value))
-                      }
-                    />
-                    <button
-                      className="text-blue-700 font-bold"
-                      onClick={() => {
-                        updateUser.mutate({ real_balance: newRealValue });
-                        setIsEditingReal(false);
-                      }}
-                    >
-                      ✅
-                    </button>
-                    <button
-                      className="text-red-500 font-bold"
-                      onClick={() => setIsEditingReal(false)}
-                    >
-                      ❌
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-lg font-semibold text-blue-700">
-                      ${user?.real_balance?.toLocaleString() ?? "—"}
-                    </span>
-                    <button
-                      className="text-sm text-blue-600 underline"
-                      onClick={() => setIsEditingReal(true)}
-                    >
-                      Edit
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+          <UserPortfolio />
           {/* Stock Data */}
           <div className="flex-[6] border border-green-400 p-2 rounded-md">
             <div className="flex h-full gap-2">

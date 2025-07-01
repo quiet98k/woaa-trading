@@ -32,6 +32,9 @@ class UserSetting(Base):
     __tablename__ = "user_settings"
 
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True)
+    
+    initial_sim_balance = Column(Float, default=100000.0, nullable=False)
+
 
     commission_rate = Column(Float, default=0.0)
     commission_type = Column(Enum(SettingType), default=SettingType.SIM)

@@ -22,6 +22,7 @@ def test_create_valid_user_setting(db):
     setting = UserSetting(
         user_id=user.id,
         commission_rate=0.001,
+        initial_sim_balance=10000,
         commission_type=SettingType.REAL,
         holding_cost_rate=0.002,
         holding_cost_type=SettingType.REAL,
@@ -39,6 +40,7 @@ def test_create_valid_user_setting(db):
     db.refresh(setting)
 
     assert setting.commission_rate == 0.001
+    assert setting.initial_sim_balance == 10000
     assert setting.drawdown_rate_threshold == 0.25
     assert setting.updated_at is not None
 

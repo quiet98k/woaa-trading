@@ -7,6 +7,7 @@ from alembic import context
 
 from app.database import Base, SYNC_DATABASE_URL
 from sqlalchemy.engine import create_engine
+from app.models import user, user_setting, position, transaction, log
 
 
 # this is the Alembic Config object, which provides

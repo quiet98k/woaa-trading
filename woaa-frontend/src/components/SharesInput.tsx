@@ -34,10 +34,16 @@ export default function SharesInput(): JSX.Element {
     if (!user) return;
 
     const baseCost = shares * openPrice;
-    const commission = baseCost * settings.commission_rate;
-    const totalSimCost = type === "Long" ? -baseCost : baseCost;
+    const commission = parseFloat(
+      (baseCost * settings.commission_rate).toFixed(2)
+    );
+    const roundedBaseCost = parseFloat(baseCost.toFixed(2));
 
-    const newSimBalance = (user.sim_balance ?? 0) + totalSimCost;
+    const totalSimCost = type === "Long" ? -roundedBaseCost : roundedBaseCost;
+
+    const newSimBalance = parseFloat(
+      ((user.sim_balance ?? 0) + totalSimCost).toFixed(2)
+    );
     const newRealBalance =
       (user.real_balance ?? 0) -
       (settings.commission_type === "real" ? commission : 0);
