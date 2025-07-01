@@ -21,7 +21,7 @@ services:
     env_file:
       - ./woaa-backend/.env
     environment:
-      DATABASE_URL: postgres://woaa_user:le918eejOHzK@db:$5432/woaa_db
+      DATABASE_URL: postgres://woaa_user:le918eejOHzK@db:5432/woaa_db
     restart: always
 
   frontend:
