@@ -13,9 +13,10 @@ export function useSimTime() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    const socket = new WebSocket(
-      `ws://localhost:8000/ws/simulation/time?token=${token}`
-    );
+    const apiUrl = import.meta.env.VITE_API_URL;
+    const wsBase = apiUrl.replace(/^http/, "ws"); // convert http → ws
+
+    const socket = new WebSocket(`${wsBase}/ws/simulation/time?token=${token}`);
 
     socket.onopen = () => {
       setConnected(true);
