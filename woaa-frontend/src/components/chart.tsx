@@ -265,9 +265,9 @@ export default function Chart({ setChartState }: ChartProps) {
           </button>
         ))}
       </div>
-      <div className="text-sm text-gray-600">
+      {/* <div className="text-sm text-gray-600">
         Open price: {allOpenPrices[selectedSymbol] ?? "N/A"}
-      </div>
+      </div> */}
       {isLoading ? (
         <div>Loading chart...</div>
       ) : isError ? (

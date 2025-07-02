@@ -37,7 +37,6 @@ export default function Dashboard() {
   // ✅ Fetch authenticated user using React Query
   const { data: user, isLoading, isError } = useMe();
 
-
   const [chartState, setChartState] = useState<ChartState>({
     symbol: "",
     openPrices: {},
@@ -63,52 +62,50 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen w-full space-y-2 bg-gray-100 p-2">
+    <div className="h-screen flex flex-col">
       <ChartContext.Provider value={{ ...chartState, setChartState }}>
         {/* User View */}
-        <div className="w-full h-[70vh] border border-gray-400 p-2 bg-white rounded-lg shadow-sm flex flex-col gap-2">
+        <div className="flex-[7] flex flex-col gap-2 border border-gray-400 p-2 bg-white rounded-lg shadow-sm overflow-hidden">
           {/* User Portfolio */}
-          <UserPortfolio />
-          {/* Stock Data */}
-          <div className="flex-[6] border border-green-400 p-2 rounded-md">
-            <div className="flex h-full gap-2">
-              {/* Stock Chart */}
-              <div className="w-[60%] border border-gray-300 rounded-md p-2 bg-gray-70 shadow-sm">
-                <div className="w-full h-[500px] text-black">
-                  <Chart setChartState={setChartState} />
-                </div>
-              </div>
+          <div className="flex-[1.5] border border-purple-400 p-2 rounded-md overflow-auto">
+            <UserPortfolio />
+          </div>
 
-              {/* Position Table */}
-              <div className="w-[40%] border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center">
-                <PositionTable />
-              </div>
+          {/* Stock Data */}
+          <div className="flex-[6] flex gap-2 border border-green-400 p-2 rounded-md overflow-hidden">
+            {/* Stock Chart */}
+            <div className="w-[60%] h-full border border-gray-300 rounded-md p-2 bg-gray-70 shadow-sm text-black overflow-hidden">
+              <Chart setChartState={setChartState} />
+            </div>
+
+            {/* Position Table */}
+            <div className="w-[40%] h-full border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-center overflow-auto">
+              <PositionTable />
             </div>
           </div>
-          {/* User Action */}
-          <div className="flex-[3] border border-orange-400 p-2 rounded-md">
-            <div className="flex h-full gap-1">
-              {/* Action 1 */}
-              <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex items-center justify-between gap-4">
-                <SharesInput />
-              </div>
 
-              {/* Action 2 */}
-              <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex flex-col justify-between text-xs gap-3">
-                <SimulationControls />
-              </div>
+          {/* User Actions */}
+          <div className="flex-[2.5] flex gap-2 border border-orange-400 p-2 rounded-md overflow-hidden">
+            {/* Shares Input */}
+            <div className="flex-1 h-full border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex flex-col justify-between overflow-auto">
+              <SharesInput />
+            </div>
 
-              {/* Action 3 */}
-              <div className="flex-1 border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex items-center justify-center">
-                <MarginManager />
-              </div>
+            {/* Simulation Controls */}
+            <div className="flex-1 h-full border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex flex-col justify-between overflow-auto">
+              <SimulationControls />
+            </div>
+
+            {/* Margin Manager */}
+            <div className="flex-1 h-full border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex flex-col justify-between overflow-auto">
+              <MarginManager />
             </div>
           </div>
         </div>
       </ChartContext.Provider>
 
       {/* Admin View */}
-      <div className="w-full h-[35vh] border border-blue-400 p-2 bg-white rounded-lg shadow-sm grid gap-2">
+      <div className="flex-[3] min-h-0 border border-blue-400 p-2 bg-white rounded-lg shadow-sm overflow-hidden flex flex-col">
         <AdminSettingsPanel />
       </div>
     </div>

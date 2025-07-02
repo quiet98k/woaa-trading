@@ -108,7 +108,7 @@ export function AdminSettingsPanel(): JSX.Element {
   return (
     <>
       <div
-        className="w-full h-[35vh] border border-blue-400 p-2 bg-white rounded-lg shadow-sm grid gap-2"
+        className="w-full flex-1 overflow-auto grid gap-2"
         style={{
           display: "grid",
           gridTemplateAreas: `
@@ -116,8 +116,8 @@ export function AdminSettingsPanel(): JSX.Element {
             "d e f"
             "g g g"
           `,
-          gridTemplateColumns: "1fr 1fr 1fr",
-          gridTemplateRows: "1fr 1fr auto",
+          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+          gridTemplateRows: "auto auto auto",
         }}
       >
         <SettingCard

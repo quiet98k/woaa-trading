@@ -26,10 +26,10 @@ load_dotenv()
 raw_origins = os.getenv("FRONTEND_ORIGIN", "")
 origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
 
-# logging.basicConfig(
-#     level=logging.DEBUG,  # or INFO
-#     format="%(levelname)s | %(asctime)s | %(message)s",
-# )
+logging.basicConfig(
+    level=logging.INFO,  # or INFO
+    format="%(levelname)s | %(asctime)s | %(message)s",
+)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
