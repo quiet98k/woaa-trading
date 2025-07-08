@@ -1,6 +1,28 @@
-def test_health_check(client):
+"""
+Tests for the FastAPI root and health check endpoints.
+"""
+
+import pytest
+from httpx import AsyncClient
+from fastapi import status
+
+
+
+async def test_health_check(client: AsyncClient):
     """
-    Basic test to check if FastAPI app is running.
+    Ensure the /health endpoint returns 200 OK and expected payload.
     """
-    res = client.get("/")
-    assert res.status_code in (200, 404)  # adjust based on your root route
+    response = await client.get("/health")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"status": "ok"}
+
+
+
+async def test_root_endpoint(client: AsyncClient):
+    """
+    Ensure the root endpoint (/) returns 200 OK and some welcome message.
+    Modify this to match your actual root handler if defined.
+    """
+    response = await client.get("/")
+    assert response.status_code == status.HTTP_200_OK
+    assert "Welcome" in response.text or response.json()

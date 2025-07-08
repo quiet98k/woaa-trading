@@ -93,6 +93,9 @@ def read_root():
         "docs": "/docs"
     }
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
 # Register routers
 app.include_router(auth.router)
