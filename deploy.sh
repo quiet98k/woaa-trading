@@ -8,9 +8,9 @@ echo "📥 Pulling latest changes from Git..."
 git pull origin main
 
 echo "🧹 Shutting down existing containers..."
-docker compose down
+sudo docker compose down
 
 echo "🔧 Rebuilding and starting containers..."
-docker compose up -d --build
+sudo docker compose up -d --build
 
 echo "✅ Deployment complete."
