@@ -27,7 +27,9 @@ export default function SharesInput(): JSX.Element {
   const openPrice = openPrices[symbol];
 
   if (!symbol || openPrice === null || openPrice === undefined || !settings) {
-    return <div>Loading symbol, price, or settings...</div>;
+    return (
+      <div className="text-black">Loading symbol, price, or settings...</div>
+    );
   }
 
   const handleTrade = (type: "Long" | "Short") => {

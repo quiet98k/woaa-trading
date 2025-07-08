@@ -240,7 +240,7 @@ export default function Chart({ setChartState }: ChartProps) {
   }, [simTime, data, selectedSymbol]);
 
   return (
-    <div className="w-full h-full flex flex-col gap-2">
+    <div className="w-full h-full flex flex-col gap-2 overflow-hidden">
       <div className="flex gap-2">
         <select
           className="border p-2 rounded-md text-black"
@@ -273,7 +273,7 @@ export default function Chart({ setChartState }: ChartProps) {
       ) : isError ? (
         <div>Error loading chart</div>
       ) : (
-        <div ref={containerRef} className="w-full h-full" />
+        <div ref={containerRef} className="flex-1 w-full overflow-hidden" />
       )}
       {/* <div className="text-sm text-gray-600">
         {Object.entries(allOpenPrices).map(([symbol, price]) => (
