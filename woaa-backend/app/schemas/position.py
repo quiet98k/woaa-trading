@@ -12,8 +12,8 @@ class PositionBase(BaseModel):
     """
     symbol: str
     position_type: Literal["Long", "Short"]
-    open_price: float
-    open_shares: float
+    open_price: float = Field(..., gt=0, description="Opening price must be > 0")
+    open_shares: float = Field(..., gt=0, description="Opening shares must be > 0")
 
 
 class PositionCreate(PositionBase):
