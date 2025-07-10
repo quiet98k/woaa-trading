@@ -8,14 +8,11 @@ from datetime import datetime
 
 
 class TransactionBase(BaseModel):
-    """
-    Shared schema attributes for transactions.
-    """
     symbol: str
-    shares: float
-    price: float
+    shares: float = Field(..., gt=0, description="Number of shares must be > 0")
+    price: float = Field(..., gt=0, description="Price must be > 0")
+    commission_charged: float = Field(..., ge=0, description="Commission must be >= 0")
     action: Literal["buy", "sell", "cover", "short"]
-    commission_charged: float
     commission_type: Literal["real", "sim"]
     notes: Optional[str] = None
 
