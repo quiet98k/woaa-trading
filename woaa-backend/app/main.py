@@ -14,7 +14,7 @@ from typing import AsyncGenerator
 
 from app.database import sync_engine, Base
 from app.api import auth
-from app.api import user, position, user_setting, transaction, simulation_ws
+from app.api import user, position, user_setting, transaction, simulation_ws, log
 from app.tasks.simulation import update_simulation_time   # Add more routers as needed
 
 # Load environment variables from .env file
@@ -107,6 +107,8 @@ app.include_router(position.router)
 app.include_router(user_setting.router)
 app.include_router(transaction.router)
 app.include_router(simulation_ws.router)
+app.include_router(log.router)
+
 
 
 
