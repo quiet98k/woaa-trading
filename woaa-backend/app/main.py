@@ -35,7 +35,7 @@ logging.basicConfig(
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Async context manager for FastAPI lifespan events.
-    Initializes DB and launches background sim clock task.
+    Initializes DB and optionally launches background sim clock task.
     """
     try:
         with sync_engine.connect() as conn:
@@ -45,18 +45,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         print("❌ Failed to connect to DB:", e)
 
-    # Start simulation time updater in background
-    task = asyncio.create_task(update_simulation_time())
-    print("🕒 Simulation updater started")
+    # Conditionally start the simulation updater (skip in test mode)
+    task = None
+    if os.getenv("TESTING") != "1":
+        task = asyncio.create_task(update_simulation_time())
+        print("🕒 Simulation updater started")
 
     try:
         yield  # App is running
     finally:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            print("🛑 Simulation updater stopped")
+        if task:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                print("🛑 Simulation updater stopped")
 
 
 
