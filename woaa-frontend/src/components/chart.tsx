@@ -139,7 +139,7 @@ export default function Chart({ setChartState }: ChartProps) {
       const match = [...bars]
         .filter((bar) => new Date(bar.t) <= simTime)
         .at(-1);
-      result[symbol] = match?.o ?? null;
+      result[symbol] = match?.c ?? null;
     });
 
     return result;
@@ -175,6 +175,18 @@ export default function Chart({ setChartState }: ChartProps) {
       },
     });
 
+    chart.applyOptions({
+      crosshair: {
+        horzLine: {
+          visible: true,
+          labelVisible: true,
+        },
+        vertLine: {
+          labelVisible: true,
+        },
+      },
+    });
+
     chartRef.current = chart;
 
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
@@ -183,6 +195,7 @@ export default function Chart({ setChartState }: ChartProps) {
       borderVisible: false,
       wickUpColor: "#26a69a",
       wickDownColor: "#ef5350",
+      lastValueVisible: true,
     });
 
     seriesRef.current = candlestickSeries;
@@ -204,6 +217,103 @@ export default function Chart({ setChartState }: ChartProps) {
         : null;
     chart.timeScale().fitContent();
   }, [data, selectedSymbol]);
+
+  useEffect(() => {
+    if (!chartRef.current || !seriesRef.current || !containerRef.current)
+      return;
+
+    const container = containerRef.current;
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+
+    const toolTipWidth = 96;
+    const toolTipHeight = 80;
+    const toolTipMargin = 15;
+
+    // Create tooltip element
+    const toolTip = document.createElement("div");
+    toolTip.style.position = "absolute";
+    toolTip.style.display = "none";
+    toolTip.style.pointerEvents = "none";
+    toolTip.style.background = "white";
+    toolTip.style.color = "black";
+    toolTip.style.border = "1px solid #26a69a";
+    toolTip.style.borderRadius = "4px";
+    toolTip.style.fontSize = "12px";
+    toolTip.style.zIndex = "1000";
+    toolTip.style.padding = "8px";
+    toolTip.style.boxSizing = "border-box";
+    toolTip.style.fontFamily =
+      "-apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif";
+    toolTip.style.whiteSpace = "nowrap"; // ✅ Prevent overflow
+    toolTip.style.maxWidth = "160px"; // ✅ Optional safety limit
+    toolTip.style.overflow = "hidden"; // ✅ Clip anything excessive
+    toolTip.style.textOverflow = "ellipsis"; // ✅ Visual fallback
+
+    container.appendChild(toolTip);
+
+    const handleCrosshairMove = (param: any) => {
+      if (
+        !param.point ||
+        !param.time ||
+        param.point.x < 0 ||
+        param.point.x > container.clientWidth ||
+        param.point.y < 0 ||
+        param.point.y > container.clientHeight
+      ) {
+        toolTip.style.display = "none";
+        return;
+      }
+
+      const data = param.seriesData.get(series);
+      if (!data) {
+        toolTip.style.display = "none";
+        return;
+      }
+
+      const price = data.value ?? data.close;
+      const coordinate = series.priceToCoordinate(price);
+      if (coordinate === null) return;
+
+      const dateStr = new Date(
+        (param.time as number) * 1000
+      ).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      toolTip.style.display = "block";
+      toolTip.innerHTML = `
+      <div style="color: #26a69a; font-weight: bold;">${selectedSymbol}</div>
+      <div style="color: black">Open: ${data.open?.toFixed(2) ?? "N/A"}</div>
+      <div style="color: black">High: ${data.high?.toFixed(2) ?? "N/A"}</div>
+      <div style="color: black">Low: ${data.low?.toFixed(2) ?? "N/A"}</div>
+      <div style="color: black">Close: ${data.close?.toFixed(2) ?? "N/A"}</div>
+    `;
+
+      // Adjust tooltip position
+      let left = param.point.x - toolTipWidth / 2;
+      if (left < 0) left = 0;
+      if (left + toolTipWidth > container.clientWidth)
+        left = container.clientWidth - toolTipWidth;
+
+      let top = param.point.y + toolTipMargin;
+      if (top + toolTipHeight > container.clientHeight) {
+        top = param.point.y - toolTipHeight - toolTipMargin;
+      }
+
+      toolTip.style.left = `${left}px`;
+      toolTip.style.top = `${top}px`;
+    };
+
+    chart.subscribeCrosshairMove(handleCrosshairMove);
+
+    return () => {
+      chart.unsubscribeCrosshairMove(handleCrosshairMove);
+      container.removeChild(toolTip);
+    };
+  }, [selectedSymbol, data]);
 
   useEffect(() => {
     if (!simTime || !data?.bars[selectedSymbol] || !seriesRef.current) return;
@@ -265,9 +375,6 @@ export default function Chart({ setChartState }: ChartProps) {
           </button>
         ))}
       </div>
-      {/* <div className="text-sm text-gray-600">
-        Open price: {allOpenPrices[selectedSymbol] ?? "N/A"}
-      </div> */}
       {isLoading ? (
         <div>Loading chart...</div>
       ) : isError ? (
@@ -275,13 +382,6 @@ export default function Chart({ setChartState }: ChartProps) {
       ) : (
         <div ref={containerRef} className="flex-1 w-full overflow-hidden" />
       )}
-      {/* <div className="text-sm text-gray-600">
-        {Object.entries(allOpenPrices).map(([symbol, price]) => (
-          <div key={symbol}>
-            {symbol}: {price ?? "N/A"}
-          </div>
-        ))}
-      </div> */}
     </div>
   );
 }
