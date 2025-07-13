@@ -142,7 +142,7 @@ export default function SimulationControls(): JSX.Element {
           value={localSpeed}
           onChange={(e) => handleSpeedChange(parseInt(e.target.value))}
         >
-          {[1, 2, 3, 4, 5].map((speed) => (
+          {[1, 2, 3, 4, 5, 10, 20].map((speed) => (
             <option key={speed} value={speed}>
               {speed}x
             </option>
