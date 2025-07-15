@@ -5,9 +5,11 @@ import {
   useUpdateSpeed,
   useUpdatePause,
   useUpdateStartTime,
+  useUpdateUserSettings,
 } from "../hooks/useUserSettings";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
-import { useMyPositions } from "../hooks/usePositions";
+import { useDeletePosition, useMyPositions } from "../hooks/usePositions";
+import { updateUserSettings } from "../api/userSettings";
 
 /**
  * Component that renders simulation controls and shows current sim_time.
@@ -33,6 +35,9 @@ export default function SimulationControls(): JSX.Element {
   const { data: positions } = useMyPositions();
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const [lastSimDay, setLastSimDay] = useState<string | null>(null);
+
+  const deletePositionMutation = useDeletePosition();
+  const updateUserSettings = useUpdateUserSettings(user?.id ?? "");
 
   const triggerEndOfDayCharges = () => {
     if (!user || !settings || !positions) return;
@@ -106,6 +111,53 @@ export default function SimulationControls(): JSX.Element {
   const handleRestart = () => {
     updateStartTime.mutate(localStartDate);
     setInitialStartDate(localStartDate); // Update reference after successful change
+  };
+
+  const handleResetData = (): void => {
+    if (!user || !settings || !positions) return;
+
+    console.log("[Reset Data] Start");
+
+    // Step 1: Reset sim_balance (user model)
+    const initialSim = settings.initial_sim_balance ?? 10000;
+    updateBalances.mutate(
+      { sim_balance: initialSim },
+      {
+        onSuccess: () => {
+          console.log("[Reset Data] sim_balance reset to", initialSim);
+        },
+        onError: (err) => {
+          console.error("[Reset Data] Failed to reset sim_balance", err);
+        },
+      }
+    );
+
+    // Step 2: Reset borrowed_margin (userSettings — direct call)
+    updateUserSettings.mutate(
+      { ...settings, borrowed_margin: 0 },
+      {
+        onSuccess: () => {
+          console.log("[Reset Data] borrowed_margin reset to 0");
+        },
+        onError: (err) => {
+          console.error("[Reset Data] Failed to reset borrowed_margin", err);
+        },
+      }
+    );
+
+    // Step 3: Delete all positions manually
+    positions.forEach((p) => {
+      if (p.id) {
+        deletePositionMutation.mutate(p.id, {
+          onSuccess: () => {
+            console.log(`[Reset Data] Deleted position ${p.id}`);
+          },
+          onError: (err) => {
+            console.error(`[Reset Data] Error deleting position ${p.id}`, err);
+          },
+        });
+      }
+    });
   };
 
   const isStartDateChanged = localStartDate !== initialStartDate;
@@ -189,6 +241,13 @@ export default function SimulationControls(): JSX.Element {
           disabled={!isStartDateChanged}
         >
           Restart
+        </button>
+
+        <button
+          onClick={handleResetData}
+          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-xs"
+        >
+          Reset Data
         </button>
 
         <button
