@@ -28,7 +28,7 @@ async def create_default_user_setting(db: AsyncSession, user_id: UUID) -> UserSe
     """
     default_setting = UserSetting(
         user_id=user_id,
-        commission_rate=0.001,
+        commission_rate=0.0,
         initial_sim_balance=10000.00,
         commission_type=SettingType.SIM,
         holding_cost_rate=0.0005,

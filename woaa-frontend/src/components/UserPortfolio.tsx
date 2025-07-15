@@ -1,10 +1,11 @@
-import { useEffect, useState, type JSX } from "react";
+import { useContext, useEffect, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useMyPositions } from "../hooks/usePositions";
 import { logout } from "../api/auth";
 import * as Dialog from "@radix-ui/react-dialog";
+import { ChartContext } from "../pages/Dashboard";
 
 /**
  * @fileoverview Fully self-contained user portfolio panel including user info, balances, and calculated profit with win/loss modal triggers.
@@ -15,6 +16,7 @@ export function UserPortfolio(): JSX.Element {
   const { data: user } = useMe();
   const { data: settings } = useUserSettings();
   const { data: positions } = useMyPositions();
+  const { openPrices, symbol } = useContext(ChartContext);
   const updateUser = useUpdateUserBalances(user?.id ?? "");
 
   const [isEditingSim, setIsEditingSim] = useState(false);
@@ -35,20 +37,46 @@ export function UserPortfolio(): JSX.Element {
   const gainThreshold = settings?.gain_rate_threshold ?? 0;
   const drawdownThreshold = settings?.drawdown_rate_threshold ?? 0;
 
-  //   console.log("Positions:", positions);
   const unrealizedShortValue = parseFloat(
     (
       positions?.reduce((total, p) => {
         if (p.position_type === "Short" && p.status === "open") {
-          return total + p.open_price * p.open_shares;
+          const currentPrice = openPrices[p.symbol];
+
+          if (currentPrice === undefined || currentPrice === null) {
+            console.error(`Missing current price for symbol: ${p.symbol}`);
+            return total; // skip this position if no current price
+          }
+
+          return total + currentPrice * p.open_shares;
         }
         return total;
       }, 0) ?? 0
     ).toFixed(2)
   );
 
-  const rawProfit = sim - initial - borrowed - unrealizedShortValue;
+  const unrealizedLongValue = parseFloat(
+    (
+      positions?.reduce((total, p) => {
+        if (p.position_type === "Long" && p.status === "open") {
+          const currentPrice = openPrices[p.symbol];
+          if (currentPrice === undefined || currentPrice === null) {
+            console.error(
+              `Missing current price for LONG position: ${p.symbol}`
+            );
+            return total;
+          }
+          return total + currentPrice * p.open_shares;
+        }
+        return total;
+      }, 0) ?? 0
+    ).toFixed(2)
+  );
+
+  const rawProfit =
+    sim - unrealizedShortValue + unrealizedLongValue - borrowed - initial;
   const profit = Math.round(rawProfit * 100) / 100;
+  const netWorth = profit + initial;
 
   const profitColor =
     profit > 0
@@ -57,8 +85,8 @@ export function UserPortfolio(): JSX.Element {
       ? "text-red-600"
       : "text-gray-600";
 
-  const winAmount = (initial * gainThreshold) / 100;
-  const loseAmount = (initial * (100 - drawdownThreshold)) / 100;
+  const winAmount = initial * (gainThreshold / 100); // profit needed to win the game
+  const loseAmount = initial * ((100 - drawdownThreshold) / 100); // minimum networth to lost the game
 
   // Show modal if thresholds reached
   useEffect(() => {
@@ -76,7 +104,7 @@ export function UserPortfolio(): JSX.Element {
     if (profit >= winAmount) {
       console.log("✅ Profit reached win threshold");
       setWinModal(true);
-    } else if (sim <= loseAmount) {
+    } else if (netWorth <= loseAmount) {
       console.log("❌ Sim balance dropped below loss threshold");
       setLoseModal(true);
     }
@@ -126,7 +154,7 @@ export function UserPortfolio(): JSX.Element {
 
       {/* Main Content */}
       <div className="flex flex-col gap-2 w-full h-full overflow-hidden">
-        {/* Top Row: 3-Column Layout */}
+        {/* Top Row: 4-Column Layout */}
         <div className="flex gap-2 text-gray-700 h-full">
           {/* Column 1: User Info + Logout */}
           <div className="flex-1 min-w-0 h-full border border-gray-300 bg-gray-50 p-2 rounded-md shadow-sm flex flex-col gap-2 overflow-auto">
@@ -161,7 +189,6 @@ export function UserPortfolio(): JSX.Element {
               </div>
             )}
           </div>
-
           {/* Column 2: Simulated + Real Value */}
           <div className="flex-1 min-w-0 h-full border border-green-300 bg-green-50 p-2 rounded-md shadow-sm flex flex-col overflow-auto">
             {/* Simulated Value */}
@@ -257,27 +284,29 @@ export function UserPortfolio(): JSX.Element {
               )}
             </div>
           </div>
-
-          {/* Column 3: Profit + Thresholds */}
-          <div className="flex-1 min-w-0 h-full border border-indigo-300 bg-indigo-50 p-2 rounded-md shadow-sm flex flex-col overflow-auto gap-2 ">
-            {/* Profit */}
-            {/* Profit */}
+          {/* Column 3: Profit + Net Worth */}
+          <div className="flex-1 min-w-0 h-full border border-indigo-300 bg-indigo-50 p-2 rounded-md shadow-sm flex flex-col overflow-auto gap-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="flex flex-col">
-                <span>Profit:</span>
-                <span className="text-[10px] text-gray-500 italic">
-                  (Initial: ${initial.toLocaleString()} | Borrowed: $
-                  {borrowed.toLocaleString()})
-                </span>
-              </span>
+              <span>Profit:</span>
               <span className={`text-base font-semibold ${profitColor}`}>
                 $
                 {profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </div>
+            <div className="flex justify-between items-center text-sm">
+              <span>Net Worth:</span>
+              <span className="font-semibold text-black">
+                $
+                {netWorth.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+          </div>
 
-            {/* Win / Loss Thresholds */}
-            <div className="flex justify-between text-gray-700">
+          {/* Column 4: Win/Loss Thresholds */}
+          <div className="flex-1 min-w-0 h-full border border-yellow-300 bg-yellow-50 p-2 rounded-md shadow-sm flex flex-col overflow-auto gap-2">
+            <div className="flex justify-between text-gray-700 text-sm">
               <span>Target Profit:</span>
               <span className="font-semibold text-green-700">
                 $
@@ -286,8 +315,8 @@ export function UserPortfolio(): JSX.Element {
                 })}
               </span>
             </div>
-            <div className="flex justify-between text-gray-700">
-              <span>Max Drawdown:</span>
+            <div className="flex justify-between text-gray-700 text-sm">
+              <span>Min Net Worth:</span>
               <span className="font-semibold text-red-700">
                 $
                 {loseAmount.toLocaleString(undefined, {

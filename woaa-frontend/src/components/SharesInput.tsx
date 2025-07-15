@@ -33,26 +33,40 @@ export default function SharesInput(): JSX.Element {
   }
 
   const handleTrade = (type: "Long" | "Short") => {
-    if (!user) return;
+    if (!user || !settings || !openPrice || !symbol) return;
+    if (shares <= 0) {
+      alert("Shares must be greater than 0.");
+      return;
+    }
 
-    const baseCost = shares * openPrice;
-    const commission = parseFloat(
-      (baseCost * settings.commission_rate).toFixed(2)
-    );
-    const roundedBaseCost = parseFloat(baseCost.toFixed(2));
+    const baseCost = parseFloat((shares * openPrice).toFixed(2));
+    const commissionRaw = baseCost * settings.commission_rate;
+    const commission = parseFloat(commissionRaw.toFixed(2));
 
-    const totalSimCost = type === "Long" ? -roundedBaseCost : roundedBaseCost;
+    const totalSimCost = type === "Long" ? -baseCost : baseCost;
+
+    const simCommission = settings.commission_type === "sim" ? commission : 0;
+    const realCommission = settings.commission_type === "real" ? commission : 0;
 
     const newSimBalance = parseFloat(
-      ((user.sim_balance ?? 0) + totalSimCost).toFixed(2)
+      ((user.sim_balance ?? 0) + totalSimCost - simCommission).toFixed(2)
     );
-    const newRealBalance =
-      (user.real_balance ?? 0) -
-      (settings.commission_type === "real" ? commission : 0);
-    const newSimBalanceAfterCommission =
-      newSimBalance - (settings.commission_type === "sim" ? commission : 0);
+    const newRealBalance = parseFloat(
+      ((user.real_balance ?? 0) - realCommission).toFixed(2)
+    );
 
-    if (newSimBalanceAfterCommission < 0) {
+    // 🔍 Log trade details
+    console.log("[Trade Info]", {
+      type,
+      shares,
+      openPrice,
+      baseCost,
+      totalSimCost,
+      commissionType: settings.commission_type,
+      commission,
+    });
+
+    if (newSimBalance < 0) {
       alert("Insufficient simulated balance (including commission).");
       return;
     }
@@ -68,7 +82,7 @@ export default function SharesInput(): JSX.Element {
         price: openPrice,
         action: type === "Long" ? "buy" : "short",
         notes: "",
-        commission_charged: parseFloat(commission.toFixed(2)),
+        commission_charged: commission,
         commission_type: settings.commission_type,
       },
       {
@@ -81,8 +95,8 @@ export default function SharesInput(): JSX.Element {
           });
 
           updateBalances.mutate({
-            sim_balance: parseFloat(newSimBalanceAfterCommission.toFixed(2)),
-            real_balance: parseFloat(newRealBalance.toFixed(2)),
+            sim_balance: newSimBalance,
+            real_balance: newRealBalance,
           });
         },
       }
