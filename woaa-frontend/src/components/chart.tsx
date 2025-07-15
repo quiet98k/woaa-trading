@@ -123,7 +123,11 @@ export default function Chart({ setChartState }: ChartProps) {
   const bars1Y = useHistoricalBars(options1Y!, !!options1Y);
 
   const barsResult =
-    selectedRange === "1D/1Min" ? bars1D : selectedRange === "1M/1D" ? bars1M : bars1Y;
+    selectedRange === "1D/1Min"
+      ? bars1D
+      : selectedRange === "1M/1D"
+      ? bars1M
+      : bars1Y;
   const { data, isLoading, isError } = barsResult;
 
   const allOpenPrices = useMemo(() => {
@@ -275,13 +279,13 @@ export default function Chart({ setChartState }: ChartProps) {
       const coordinate = series.priceToCoordinate(price);
       if (coordinate === null) return;
 
-      const dateStr = new Date(
-        (param.time as number) * 1000
-      ).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
+      // const dateStr = new Date(
+      //   (param.time as number) * 1000
+      // ).toLocaleDateString("en-US", {
+      //   month: "short",
+      //   day: "numeric",
+      //   year: "numeric",
+      // });
 
       toolTip.style.display = "block";
       toolTip.innerHTML = `
