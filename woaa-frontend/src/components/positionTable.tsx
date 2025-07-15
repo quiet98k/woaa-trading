@@ -16,7 +16,7 @@ import { useUserSettings } from "../hooks/useUserSettings";
  */
 export function PositionTable(): JSX.Element {
   const { data: positions, isLoading } = useMyPositions();
-  const { data: user } = useMe();
+  const { data: user, refetch: refetchUser } = useMe();
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const deleteMutation = useDeletePosition();
   const { openPrices } = useContext(ChartContext);
@@ -26,6 +26,32 @@ export function PositionTable(): JSX.Element {
   const [selectedPowerUpId, setSelectedPowerUpId] = useState<string | null>(
     null
   );
+
+  function runFlattenQueue(
+    positions: any[],
+    openPrices: Record<string, number | null>,
+    handleClose: (p: any, currentPrice: number, next?: () => void) => void
+  ) {
+    const queue = [...positions];
+
+    const runNext = () => {
+      const p = queue.shift();
+      if (!p) return;
+
+      const currentPrice = openPrices[p.symbol];
+      if (
+        p.status === "open" &&
+        currentPrice !== undefined &&
+        currentPrice !== null
+      ) {
+        handleClose(p, currentPrice, runNext);
+      } else {
+        runNext(); // skip invalid and keep going
+      }
+    };
+
+    runNext();
+  }
 
   const handleDelete = (p: any) => {
     deleteMutation.mutate(p.id, {
@@ -72,71 +98,101 @@ export function PositionTable(): JSX.Element {
     setSelectedPowerUpId(null);
   };
 
-  const handleClose = (p: any, currentPrice: number) => {
-    if (!user || !settings) return;
+  const handleClose = (
+    p: any,
+    currentPrice: number,
+    next?: () => void
+  ): void => {
+    if (!settings) return;
 
-    const shares = p.open_shares;
-    const grossProceeds =
-      currentPrice * (p.position_type === "Long" ? shares : -shares);
+    refetchUser().then(({ data: freshUser }) => {
+      if (!freshUser) return;
 
-    const commission = Math.abs(
-      currentPrice * shares * settings.commission_rate
-    );
-    const netProceeds =
-      grossProceeds - (settings.commission_type === "sim" ? commission : 0);
+      const shares = p.open_shares;
+      const grossProceeds =
+        currentPrice * (p.position_type === "Long" ? shares : -shares);
 
-    const realized =
-      (currentPrice - p.open_price) *
-      (p.position_type === "Long" ? shares : -shares);
+      const commissionRaw = currentPrice * shares * settings.commission_rate;
+      const commission = Math.abs(commissionRaw);
 
-    // Step 1: create transaction log
-    createTransaction.mutate({
-      symbol: p.symbol,
-      shares,
-      price: currentPrice,
-      action: p.position_type === "Long" ? "sell" : "cover",
-      notes: "",
-      commission_charged: parseFloat(commission.toFixed(2)),
-      commission_type: settings.commission_type,
+      const netProceeds =
+        grossProceeds - (settings.commission_type === "sim" ? commission : 0);
+
+      const realized =
+        (currentPrice - p.open_price) *
+        (p.position_type === "Long" ? shares : -shares);
+
+      console.log("[Close Trade Info]", {
+        id: p.id,
+        symbol: p.symbol,
+        type: p.position_type,
+        shares,
+        openPrice: p.open_price,
+        currentPrice,
+        grossProceeds,
+        commissionType: settings.commission_type,
+        commission: parseFloat(commission.toFixed(2)),
+        netProceeds,
+        realizedPL: realized,
+        simBefore: freshUser.sim_balance,
+        realBefore: freshUser.real_balance,
+      });
+
+      createTransaction.mutate(
+        {
+          symbol: p.symbol,
+          shares,
+          price: currentPrice,
+          action: p.position_type === "Long" ? "sell" : "cover",
+          notes: "",
+          commission_charged: parseFloat(commission.toFixed(2)),
+          commission_type: settings.commission_type,
+        },
+        {
+          onSuccess: () => {
+            updatePosition.mutate(
+              {
+                positionId: p.id,
+                updates: {
+                  close_price: currentPrice,
+                  close_shares: shares,
+                  close_time: new Date().toISOString(),
+                  realized_pl: realized,
+                  status: "closed",
+                },
+              },
+              {
+                onSuccess: () => {
+                  const updatedBalances: {
+                    sim_balance?: number;
+                    real_balance?: number;
+                  } = {};
+
+                  if (settings.commission_type === "real") {
+                    updatedBalances.real_balance = parseFloat(
+                      ((freshUser.real_balance ?? 0) - commission).toFixed(2)
+                    );
+                    updatedBalances.sim_balance = parseFloat(
+                      ((freshUser.sim_balance ?? 0) + grossProceeds).toFixed(2)
+                    );
+                  } else {
+                    updatedBalances.sim_balance = parseFloat(
+                      ((freshUser.sim_balance ?? 0) + netProceeds).toFixed(2)
+                    );
+                  }
+
+                  updateBalances.mutate(updatedBalances, {
+                    onSuccess: () => {
+                      if (next) next();
+                    },
+                  });
+                },
+              }
+            );
+          },
+        }
+      );
     });
-
-    // Step 2: update position
-    updatePosition.mutate(
-      {
-        positionId: p.id,
-        updates: {
-          close_price: currentPrice,
-          close_shares: shares,
-          close_time: new Date().toISOString(),
-          realized_pl: realized,
-          status: "closed",
-        },
-      },
-      {
-        onSuccess: () => {
-          // Step 3: update user balances
-          const updatedBalances: {
-            sim_balance?: number;
-            real_balance?: number;
-          } = {};
-
-          if (settings.commission_type === "real") {
-            updatedBalances.real_balance = parseFloat(
-              ((user.real_balance ?? 0) - commission).toFixed(2)
-            );
-            updatedBalances.sim_balance = parseFloat(
-              ((user.sim_balance ?? 0) + grossProceeds).toFixed(2)
-            );
-          } else {
-            updatedBalances.sim_balance = parseFloat(
-              ((user.sim_balance ?? 0) + netProceeds).toFixed(2)
-            );
-          }
-
-          updateBalances.mutate(updatedBalances);
-        },
-      }
-    );
   };
 
   return (
@@ -149,16 +205,7 @@ export function PositionTable(): JSX.Element {
             <button
               className="text-xs text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded"
               onClick={() => {
-                positions.forEach((p) => {
-                  const currentPrice = openPrices[p.symbol];
-                  if (
-                    p.status === "open" &&
-                    currentPrice !== undefined &&
-                    currentPrice !== null
-                  ) {
-                    handleClose(p, currentPrice);
-                  }
-                });
+                runFlattenQueue(positions, openPrices, handleClose);
               }}
             >
               Flatten All

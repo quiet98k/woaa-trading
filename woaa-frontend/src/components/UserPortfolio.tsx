@@ -92,14 +92,15 @@ export function UserPortfolio(): JSX.Element {
   useEffect(() => {
     if (!initial || !settings) return;
 
-    console.log("[Threshold Check]");
-    console.log("Sim Balance:", sim);
-    console.log("Initial Balance:", initial);
-    console.log("Borrowed Margin:", borrowed);
-    console.log("Profit:", profit);
-    console.log("Win Threshold ($):", winAmount);
-    console.log("Loss Threshold ($):", loseAmount);
-    console.log("unrealizedShortValue: ", unrealizedShortValue);
+    // console.log("[Threshold Check]", {
+    //   simBalance: sim,
+    //   initialBalance: initial,
+    //   borrowedMargin: borrowed,
+    //   profit,
+    //   winThreshold: winAmount,
+    //   lossThreshold: loseAmount,
+    //   unrealizedShortValue,
+    // });
 
     if (profit >= winAmount) {
       console.log("✅ Profit reached win threshold");
