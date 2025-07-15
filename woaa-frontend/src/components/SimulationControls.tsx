@@ -9,7 +9,6 @@ import {
 } from "../hooks/useUserSettings";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useDeletePosition, useMyPositions } from "../hooks/usePositions";
-import { updateUserSettings } from "../api/userSettings";
 
 /**
  * Component that renders simulation controls and shows current sim_time.
