@@ -28,7 +28,7 @@ const SYMBOL_OPTIONS: Record<string, string> = {
   VXX: "VXX",
 };
 
-type TimeOption = "1D" | "1M" | "1Y";
+type TimeOption = "1D/1Min" | "1M/1D" | "1Y/1M";
 
 const TIMEFRAME_INTERVAL_MAP: Record<
   TimeOption,
@@ -39,9 +39,9 @@ const TIMEFRAME_INTERVAL_MAP: Record<
     rangeYears?: number;
   }
 > = {
-  "1D": { timeframe: "1Min", rangeDays: 1 },
-  "1M": { timeframe: "1Day", rangeMonths: 1 },
-  "1Y": { timeframe: "1Month", rangeYears: 1 },
+  "1D/1Min": { timeframe: "1Min", rangeDays: 1 },
+  "1M/1D": { timeframe: "1Day", rangeMonths: 1 },
+  "1Y/1M": { timeframe: "1Month", rangeYears: 1 },
 };
 
 function getPreviousMarketDay(date: Date): string {
@@ -77,13 +77,13 @@ export default function Chart({ setChartState }: ChartProps) {
   const lastCandleTimeRef = useRef<UTCTimestamp | null>(null);
 
   const [selectedSymbol, setSelectedSymbol] = useState("AAPL");
-  const [selectedRange, setSelectedRange] = useState<TimeOption>("1D");
+  const [selectedRange, setSelectedRange] = useState<TimeOption>("1D/1Min");
 
   const { simTime } = useSimTime();
 
   const buildAllSymbols1DOptions = () => {
     if (!simTime) return null;
-    const config = TIMEFRAME_INTERVAL_MAP["1D"];
+    const config = TIMEFRAME_INTERVAL_MAP["1D/1Min"];
     const end = getNextMarketDay(simTime);
     const startDate = new Date(simTime);
     startDate.setDate(startDate.getDate() - (config.rangeDays ?? 1));
@@ -101,7 +101,7 @@ export default function Chart({ setChartState }: ChartProps) {
 
   const options1M = useMemo(() => {
     if (!simTime || !selectedSymbol) return null;
-    const config = TIMEFRAME_INTERVAL_MAP["1M"];
+    const config = TIMEFRAME_INTERVAL_MAP["1M/1D"];
     const end = getNextMarketDay(simTime);
     const startDate = new Date(simTime);
     startDate.setMonth(startDate.getMonth() - (config.rangeMonths ?? 1));
@@ -111,7 +111,7 @@ export default function Chart({ setChartState }: ChartProps) {
 
   const options1Y = useMemo(() => {
     if (!simTime || !selectedSymbol) return null;
-    const config = TIMEFRAME_INTERVAL_MAP["1Y"];
+    const config = TIMEFRAME_INTERVAL_MAP["1Y/1M"];
     const end = getNextMarketDay(simTime);
     const startDate = new Date(simTime);
     startDate.setFullYear(startDate.getFullYear() - (config.rangeYears ?? 1));
@@ -123,7 +123,7 @@ export default function Chart({ setChartState }: ChartProps) {
   const bars1Y = useHistoricalBars(options1Y!, !!options1Y);
 
   const barsResult =
-    selectedRange === "1D" ? bars1D : selectedRange === "1M" ? bars1M : bars1Y;
+    selectedRange === "1D/1Min" ? bars1D : selectedRange === "1M/1D" ? bars1M : bars1Y;
   const { data, isLoading, isError } = barsResult;
 
   const allOpenPrices = useMemo(() => {
@@ -161,7 +161,7 @@ export default function Chart({ setChartState }: ChartProps) {
       layout: { textColor: "black", background: { color: "white" } },
       height: 400,
       timeScale: {
-        timeVisible: selectedRange === "1D",
+        timeVisible: selectedRange === "1D/1Min",
         secondsVisible: false,
       },
       localization: {
@@ -363,7 +363,7 @@ export default function Chart({ setChartState }: ChartProps) {
             </option>
           ))}
         </select>
-        {(["1D", "1M", "1Y"] as TimeOption[]).map((range) => (
+        {(["1D/1Min", "1M/1D", "1Y/1M"] as TimeOption[]).map((range) => (
           <button
             key={range}
             onClick={() => setSelectedRange(range)}
