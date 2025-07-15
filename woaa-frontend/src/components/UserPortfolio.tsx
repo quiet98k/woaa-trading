@@ -16,7 +16,7 @@ export function UserPortfolio(): JSX.Element {
   const { data: user } = useMe();
   const { data: settings } = useUserSettings();
   const { data: positions } = useMyPositions();
-  const { openPrices, symbol } = useContext(ChartContext);
+  const { openPrices } = useContext(ChartContext);
   const updateUser = useUpdateUserBalances(user?.id ?? "");
 
   const [isEditingSim, setIsEditingSim] = useState(false);
