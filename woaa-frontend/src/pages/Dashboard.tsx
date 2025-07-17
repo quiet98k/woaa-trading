@@ -5,7 +5,7 @@
 
 import Chart from "../components/chart";
 
-import { createContext, useState } from "react";
+import { createContext, useState, Component, type ReactNode } from "react";
 import { useMe } from "../hooks/useUser";
 import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +19,30 @@ import { UserPortfolio } from "../components/UserPortfolio";
 export interface ChartState {
   symbol: string;
   openPrices: Record<string, number | null>;
+}
+
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error("Caught in ErrorBoundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError)
+      return <div>Something went wrong in the chart.</div>;
+    return this.props.children;
+  }
 }
 
 export const ChartContext = createContext<{
@@ -75,7 +99,9 @@ export default function Dashboard() {
           <div className="flex-[6] flex gap-2 border border-green-400 p-2 rounded-md overflow-hidden">
             {/* Stock Chart */}
             <div className="w-[60%] h-full border border-gray-300 rounded-md p-2 bg-gray-70 shadow-sm text-black overflow-hidden">
-              <Chart setChartState={setChartState} />
+              <ErrorBoundary>
+                <Chart setChartState={setChartState} />
+              </ErrorBoundary>
             </div>
 
             {/* Position Table */}

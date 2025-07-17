@@ -315,7 +315,9 @@ export default function Chart({ setChartState }: ChartProps) {
 
     return () => {
       chart.unsubscribeCrosshairMove(handleCrosshairMove);
-      container.removeChild(toolTip);
+      if (container.contains(toolTip)) {
+        container.removeChild(toolTip);
+      }
     };
   }, [selectedSymbol, data]);
 
