@@ -4,7 +4,7 @@
  */
 
 const BASE_URL = "https://data.alpaca.markets/v2/stocks/bars";
-const CALENDAR_URL = "https://paper-api.alpaca.markets/v2/calendar";
+const CALENDAR_URL = "https://api.alpaca.markets/v2/calendar";
 
 /**
  * Options for fetching historical bars from Alpaca.

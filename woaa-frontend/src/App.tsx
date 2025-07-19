@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 import AlpacaTest from "./pages/AlpacaTest";
+import TestRealTimePage from "./pages/TestRealTimePage";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route path="*" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/test-data" element={<AlpacaTest />} />
+        <Route path="/test-real" element={<TestRealTimePage />} />
       </Routes>
     </Router>
   );
