@@ -6,6 +6,7 @@ import { useMyPositions } from "../hooks/usePositions";
 import { logout } from "../api/auth";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChartContext } from "../pages/Dashboard";
+import { useUpdatePause } from "../hooks/useUserSettings";
 
 /**
  * @fileoverview Fully self-contained user portfolio panel including user info, balances, and calculated profit with win/loss modal triggers.
@@ -18,6 +19,7 @@ export function UserPortfolio(): JSX.Element {
   const { data: positions } = useMyPositions();
   const { openPrices } = useContext(ChartContext);
   const updateUser = useUpdateUserBalances(user?.id ?? "");
+  const updatePause = useUpdatePause();
 
   const [isEditingSim, setIsEditingSim] = useState(false);
   const [isEditingReal, setIsEditingReal] = useState(false);
@@ -92,24 +94,40 @@ export function UserPortfolio(): JSX.Element {
   useEffect(() => {
     if (!initial || !settings) return;
 
-    // console.log("[Threshold Check]", {
-    //   simBalance: sim,
-    //   initialBalance: initial,
-    //   borrowedMargin: borrowed,
-    //   profit,
-    //   winThreshold: winAmount,
-    //   lossThreshold: loseAmount,
-    //   unrealizedShortValue,
-    // });
+    console.log("[Threshold Check]", {
+      simBalance: sim,
+      initialBalance: initial,
+      borrowedMargin: borrowed,
+      profit,
+      netWorth,
+      winThreshold: winAmount,
+      lossThreshold: loseAmount,
+      unrealizedShortValue,
+    });
 
     if (profit >= winAmount) {
-      console.log("✅ Profit reached win threshold");
+      console.log(
+        `✅ Profit reached win threshold: profit=${profit}, winThreshold=${winAmount}`
+      );
+      updatePause.mutate(true);
       setWinModal(true);
     } else if (netWorth <= loseAmount) {
-      console.log("❌ Sim balance dropped below loss threshold");
+      console.log(
+        `❌ Net Worth dropped below loss threshold: netWorth=${netWorth}, lossThreshold=${loseAmount}`
+      );
+      updatePause.mutate(true);
       setLoseModal(true);
     }
-  }, [sim, profit, initial, winAmount, loseAmount, settings]);
+  }, [
+    sim,
+    profit,
+    initial,
+    winAmount,
+    loseAmount,
+    settings,
+    positions,
+    openPrices,
+  ]);
 
   return (
     <>
@@ -122,7 +140,8 @@ export function UserPortfolio(): JSX.Element {
               🎉 You Win!
             </Dialog.Title>
             <Dialog.Description className="text-gray-700 mb-4">
-              Your profit has reached ${winAmount.toLocaleString()}.
+              Your profit of ${profit.toLocaleString()} has reached $
+              {winAmount.toLocaleString()}, Game Paused.
             </Dialog.Description>
             <Dialog.Close asChild>
               <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
@@ -142,7 +161,8 @@ export function UserPortfolio(): JSX.Element {
               ❌ You Lose
             </Dialog.Title>
             <Dialog.Description className="text-gray-700 mb-4">
-              Your balance dropped below ${loseAmount.toLocaleString()}.
+              Your net worth of ${netWorth.toLocaleString()} dropped below $
+              {loseAmount.toLocaleString()}, Game Paused.
             </Dialog.Description>
             <Dialog.Close asChild>
               <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
