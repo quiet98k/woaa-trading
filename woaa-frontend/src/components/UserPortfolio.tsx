@@ -1,8 +1,11 @@
-import { useContext, useEffect, useState, type JSX } from "react";
+import { useContext, useEffect, useRef, useState, type JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
-import { useUserSettings } from "../hooks/useUserSettings";
-import { useMyPositions } from "../hooks/usePositions";
+import {
+  useUpdateUserSettings,
+  useUserSettings,
+} from "../hooks/useUserSettings";
+import { useDeletePosition, useMyPositions } from "../hooks/usePositions";
 import { logout } from "../api/auth";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChartContext } from "../pages/Dashboard";
@@ -21,6 +24,9 @@ export function UserPortfolio(): JSX.Element {
   const updateUser = useUpdateUserBalances(user?.id ?? "");
   const updatePause = useUpdatePause();
   const { mode, setMode } = useContext(ChartContext);
+  const updateBalances = useUpdateUserBalances(user?.id ?? "");
+  const updateUserSettings = useUpdateUserSettings(user?.id ?? "");
+  const deletePositionMutation = useDeletePosition();
 
   const [isEditingSim, setIsEditingSim] = useState(false);
   const [isEditingReal, setIsEditingReal] = useState(false);
@@ -129,6 +135,63 @@ export function UserPortfolio(): JSX.Element {
     positions,
     openPrices,
   ]);
+
+  // keep track of previous mode to detect changes
+  const prevMode = useRef(mode);
+
+  useEffect(() => {
+    if (prevMode.current !== mode) {
+      prevMode.current = mode;
+
+      if (!user || !settings || !positions) return;
+
+      console.log("[Reset Data] Start (triggered by mode switch)");
+
+      const initialSim = settings.initial_sim_balance ?? 10000;
+
+      updateBalances.mutate(
+        { sim_balance: initialSim },
+        {
+          onSuccess: () => {
+            console.log("[Reset Data] sim_balance reset to", initialSim);
+          },
+          onError: (err) => {
+            console.error("[Reset Data] Failed to reset sim_balance", err);
+          },
+        }
+      );
+
+      updateUserSettings.mutate(
+        { ...settings, borrowed_margin: 0 },
+        {
+          onSuccess: () => {
+            console.log("[Reset Data] borrowed_margin reset to 0");
+          },
+          onError: (err) => {
+            console.error("[Reset Data] Failed to reset borrowed_margin", err);
+          },
+        }
+      );
+
+      positions.forEach((p) => {
+        if (p.id) {
+          deletePositionMutation.mutate(p.id, {
+            onSuccess: () => {
+              console.log(`[Reset Data] Deleted position ${p.id}`);
+            },
+            onError: (err) => {
+              console.error(
+                `[Reset Data] Error deleting position ${p.id}`,
+                err
+              );
+            },
+          });
+        }
+      });
+
+      updatePause.mutate(true);
+    }
+  }, [mode]);
 
   return (
     <>

@@ -23,6 +23,7 @@ import { MarginManager } from "../components/MarginManager";
 import { UserPortfolio } from "../components/UserPortfolio";
 import RealTimeChart from "../components/RealTimeChart";
 import RealTimeSharesInput from "../components/RealTimeSharesInput";
+import MarketStatusBanner from "../components/MarketStatusBanner";
 
 export type DataMode = "historical" | "realtime";
 export interface DataModeState {
@@ -152,7 +153,11 @@ export default function Dashboard() {
 
             {/* Simulation Controls */}
             <div className="flex-1 h-full border border-gray-300 rounded-md p-2 bg-gray-100 shadow-sm flex flex-col justify-between overflow-auto">
-              <SimulationControls />
+              {mode === "historical" ? (
+                <SimulationControls />
+              ) : (
+                <MarketStatusBanner />
+              )}
             </div>
 
             {/* Margin Manager */}

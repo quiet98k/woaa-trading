@@ -8,6 +8,8 @@ import { useCreateTransaction } from "../hooks/useTransactions";
 import { ChartContext } from "../pages/Dashboard";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";
+import { useRealTimeData } from "../hooks/useRealTimeData";
+import { useMarketClock } from "../hooks/useMarketClock";
 
 /**
  * Table component to display a list of user positions with live open prices.
@@ -19,7 +21,12 @@ export function PositionTable(): JSX.Element {
   const { data: user, refetch: refetchUser } = useMe();
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const deleteMutation = useDeletePosition();
-  const { openPrices } = useContext(ChartContext);
+  const { openPrices, mode } = useContext(ChartContext);
+  const { clock, loading: clockLoading } = useMarketClock();
+
+  const symbols = positions?.map((p) => p.symbol) ?? [];
+  const { latestBars } = useRealTimeData(mode === "realtime" ? symbols : []);
+
   const createTransaction = useCreateTransaction();
   const { data: settings } = useUserSettings();
   const updatePosition = useUpdatePosition();
@@ -262,7 +269,14 @@ export function PositionTable(): JSX.Element {
               </thead>
               <tbody>
                 {positions.map((p) => {
-                  const currentPrice = openPrices[p.symbol] ?? null;
+                  let currentPrice: number | null = null;
+
+                  if (mode === "historical") {
+                    currentPrice = openPrices[p.symbol] ?? null;
+                  } else if (mode === "realtime" && clock?.is_open) {
+                    currentPrice = latestBars[p.symbol]?.c ?? null;
+                  }
+
                   const unrealizedPL =
                     currentPrice !== null && p.status === "open"
                       ? (currentPrice - p.open_price) *
@@ -294,14 +308,23 @@ export function PositionTable(): JSX.Element {
                           : "—"}
                       </td>
                       <td className="px-1 py-1 flex gap-1 items-center">
-                        {p.status === "open" && currentPrice !== null && (
+                        {p.status === "open" && (
                           <button
-                            onClick={() => handleClose(p, currentPrice)}
-                            className="text-blue-500 hover:underline"
+                            onClick={() =>
+                              currentPrice !== null &&
+                              handleClose(p, currentPrice)
+                            }
+                            disabled={currentPrice === null}
+                            className={`${
+                              currentPrice === null
+                                ? "text-gray-400 cursor-not-allowed"
+                                : "text-blue-500 hover:underline"
+                            }`}
                           >
                             {p.position_type === "Long" ? "Sell" : "Cover"}
                           </button>
                         )}
+
                         <button
                           onClick={() => handleDelete(p)}
                           className="text-red-500 hover:underline"
