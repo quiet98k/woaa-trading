@@ -253,7 +253,7 @@ export function PositionTable(): JSX.Element {
                   <th className="px-1 py-1">Symbol</th>
                   <th className="px-1 py-1">Type</th>
                   <th className="px-1 py-1">Open Price</th>
-                  <th className="px-1 py-1">Current Price</th>
+                  <th className="px-1 py-1">Current/Closed Price</th>
                   <th className="px-1 py-1">Shares</th>
                   <th className="px-1 py-1">Status</th>
                   <th className="px-1 py-1">P&amp;L</th>
@@ -277,10 +277,13 @@ export function PositionTable(): JSX.Element {
                       <td className="px-1 py-1">{p.position_type}</td>
                       <td className="px-1 py-1">${p.open_price.toFixed(2)}</td>
                       <td className="px-1 py-1">
-                        {currentPrice !== null
+                        {p.status === "closed"
+                          ? `$${p.close_price?.toFixed(2) ?? "—"}`
+                          : currentPrice !== null
                           ? `$${currentPrice.toFixed(2)}`
                           : "—"}
                       </td>
+
                       <td className="px-1 py-1">{p.open_shares}</td>
                       <td className="px-1 py-1">{p.status}</td>
                       <td className="px-1 py-1">
