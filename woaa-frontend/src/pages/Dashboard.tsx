@@ -22,6 +22,7 @@ import { AdminSettingsPanel } from "../components/AdminControls";
 import { MarginManager } from "../components/MarginManager";
 import { UserPortfolio } from "../components/UserPortfolio";
 import RealTimeChart from "../components/RealTimeChart";
+import RealTimeSharesInput from "../components/RealTimeSharesInput";
 
 export type DataMode = "historical" | "realtime";
 export interface DataModeState {
@@ -142,7 +143,11 @@ export default function Dashboard() {
           <div className="flex-[2.5] flex gap-2 border border-orange-400 p-2 rounded-md overflow-hidden">
             {/* Shares Input */}
             <div className="flex-1 h-full border border-gray-300 rounded-md p-2 bg-gray-50 shadow-sm flex flex-col justify-between overflow-auto">
-              <SharesInput />
+              {mode === "historical" ? (
+                <SharesInput />
+              ) : (
+                <RealTimeSharesInput />
+              )}
             </div>
 
             {/* Simulation Controls */}
