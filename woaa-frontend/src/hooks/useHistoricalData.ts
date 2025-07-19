@@ -3,7 +3,10 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { fetchHistoricalBars, type FetchBarsOptions } from "../api/alpaca";
+import {
+  fetchHistoricalBars,
+  type FetchBarsOptions,
+} from "../api/historicalData";
 
 /**
  * Hook to fetch historical bars using Alpaca Market Data API.

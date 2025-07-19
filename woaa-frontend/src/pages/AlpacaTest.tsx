@@ -3,7 +3,7 @@
  */
 
 import { useState } from "react";
-import { fetchHistoricalBars } from "../api/alpaca";
+import { fetchHistoricalBars } from "../api/historicalData";
 
 /**
  * Converts UTC datetime string to a formatted string in Los Angeles time.

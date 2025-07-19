@@ -13,7 +13,7 @@ import {
   type ISeriesApi,
 } from "lightweight-charts";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useHistoricalBars } from "../hooks/useHistoricalBars";
+import { useHistoricalBars } from "../hooks/useHistoricalData";
 import { useSimTime } from "../hooks/useSimTimeSocket";
 
 const SYMBOL_OPTIONS: Record<string, string> = {
