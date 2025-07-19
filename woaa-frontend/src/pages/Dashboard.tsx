@@ -3,7 +3,7 @@
  * Includes simulated and real balances, a candlestick chart, user trade controls, and admin fee settings.
  */
 
-import Chart from "../components/chart";
+import Chart from "../components/HistoricalChart";
 
 import { createContext, useState, Component, type ReactNode } from "react";
 import { useMe } from "../hooks/useUser";
