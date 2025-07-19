@@ -5,7 +5,13 @@
 
 import Chart from "../components/HistoricalChart";
 
-import { createContext, useState, Component, type ReactNode } from "react";
+import {
+  createContext,
+  useState,
+  Component,
+  type ReactNode,
+  useEffect,
+} from "react";
 import { useMe } from "../hooks/useUser";
 import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
@@ -15,11 +21,32 @@ import SimulationControls from "../components/SimulationControls";
 import { AdminSettingsPanel } from "../components/AdminControls";
 import { MarginManager } from "../components/MarginManager";
 import { UserPortfolio } from "../components/UserPortfolio";
+import RealTimeChart from "../components/RealTimeChart";
+
+export type DataMode = "historical" | "realtime";
+export interface DataModeState {
+  mode: DataMode;
+  setMode: (mode: DataMode) => void;
+}
 
 export interface ChartState {
   symbol: string;
   openPrices: Record<string, number | null>;
 }
+
+export const ChartContext = createContext<{
+  symbol: string;
+  openPrices: Record<string, number | null>;
+  setChartState: (state: ChartState) => void;
+  mode: DataMode;
+  setMode: (mode: DataMode) => void;
+}>({
+  symbol: "",
+  openPrices: {},
+  setChartState: () => {},
+  mode: "historical",
+  setMode: () => {},
+});
 
 class ErrorBoundary extends Component<
   { children: ReactNode },
@@ -45,16 +72,6 @@ class ErrorBoundary extends Component<
   }
 }
 
-export const ChartContext = createContext<{
-  symbol: string;
-  openPrices: Record<string, number | null>;
-  setChartState: (state: ChartState) => void;
-}>({
-  symbol: "",
-  openPrices: {},
-  setChartState: () => {},
-});
-
 export default function Dashboard() {
   const navigate = useNavigate();
 
@@ -65,6 +82,15 @@ export default function Dashboard() {
     symbol: "",
     openPrices: {},
   });
+
+  const [mode, setMode] = useState<DataMode>(() => {
+    const saved = localStorage.getItem("dataMode");
+    return saved === "realtime" ? "realtime" : "historical";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("dataMode", mode);
+  }, [mode]);
 
   // ✅ Handle loading and error states
   if (isLoading) return <div>Loading...</div>;
@@ -87,7 +113,9 @@ export default function Dashboard() {
 
   return (
     <div className="h-screen flex flex-col">
-      <ChartContext.Provider value={{ ...chartState, setChartState }}>
+      <ChartContext.Provider
+        value={{ ...chartState, setChartState, mode, setMode }}
+      >
         {/* User View */}
         <div className="flex-[7] flex flex-col gap-2 border border-gray-400 p-2 bg-white rounded-lg shadow-sm overflow-hidden">
           {/* User Portfolio */}
@@ -100,7 +128,7 @@ export default function Dashboard() {
             {/* Stock Chart */}
             <div className="w-[60%] h-full border border-gray-300 rounded-md p-2 bg-gray-70 shadow-sm text-black overflow-hidden">
               <ErrorBoundary>
-                <Chart setChartState={setChartState} />
+                {mode === "historical" ? <Chart /> : <RealTimeChart />}
               </ErrorBoundary>
             </div>
 

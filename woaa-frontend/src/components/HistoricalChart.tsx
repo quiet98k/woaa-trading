@@ -12,9 +12,10 @@ import {
   type CandlestickData,
   type ISeriesApi,
 } from "lightweight-charts";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useHistoricalBars } from "../hooks/useHistoricalData";
 import { useSimTime } from "../hooks/useSimTimeSocket";
+import { ChartContext } from "../pages/Dashboard";
 
 const SYMBOL_OPTIONS: Record<string, string> = {
   Apple: "AAPL",
@@ -60,21 +61,15 @@ function getNextMarketDay(date: Date): string {
   return d.toISOString().split("T")[0];
 }
 
-interface ChartProps {
-  setChartState: React.Dispatch<
-    React.SetStateAction<{
-      symbol: string;
-      openPrices: Record<string, number | null>;
-    }>
-  >;
-}
 
-export default function Chart({ setChartState }: ChartProps) {
+export default function Chart() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const lastSimMinute = useRef<number | null>(null);
   const lastCandleTimeRef = useRef<UTCTimestamp | null>(null);
+  const { setChartState } = useContext(ChartContext);
+
 
   const [selectedSymbol, setSelectedSymbol] = useState("AAPL");
   const [selectedRange, setSelectedRange] = useState<TimeOption>("1D/1Min");

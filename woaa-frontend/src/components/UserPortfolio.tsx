@@ -20,6 +20,7 @@ export function UserPortfolio(): JSX.Element {
   const { openPrices } = useContext(ChartContext);
   const updateUser = useUpdateUserBalances(user?.id ?? "");
   const updatePause = useUpdatePause();
+  const { mode, setMode } = useContext(ChartContext);
 
   const [isEditingSim, setIsEditingSim] = useState(false);
   const [isEditingReal, setIsEditingReal] = useState(false);
@@ -178,38 +179,54 @@ export function UserPortfolio(): JSX.Element {
         {/* Top Row: 4-Column Layout */}
         <div className="flex gap-2 text-gray-700 h-full">
           {/* Column 1: User Info + Logout */}
-          <div className="flex-1 min-w-0 h-full border border-gray-300 bg-gray-50 p-2 rounded-md shadow-sm flex flex-col gap-2 overflow-auto">
-            {user && (
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col text-xs sm:text-sm break-words">
-                  <div>
-                    <strong>User:</strong> {user.username}
-                  </div>
-                  <div>
-                    <strong>Email:</strong> {user.email}
-                  </div>
-                  <div>
-                    <strong>Role:</strong>{" "}
-                    {user.is_admin ? (
-                      <span className="text-red-600 font-semibold">Admin</span>
-                    ) : (
-                      <span className="text-gray-600">Regular User</span>
-                    )}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => {
-                    logout();
-                    navigate("/login");
-                  }}
-                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs"
-                >
-                  Logout
-                </button>
+          <div className="flex justify-between items-start">
+            {/* User Info */}
+            <div className="flex flex-col text-xs sm:text-sm break-words">
+              <div>
+                <strong>User:</strong> {user.username}
               </div>
-            )}
+              <div>
+                <strong>Email:</strong> {user.email}
+              </div>
+              <div>
+                <strong>Role:</strong>{" "}
+                {user.is_admin ? (
+                  <span className="text-red-600 font-semibold">Admin</span>
+                ) : (
+                  <span className="text-gray-600">Regular User</span>
+                )}
+              </div>
+            </div>
+
+            {/* Logout & Toggle */}
+            <div className="flex items-center gap-3">
+              {/* Toggle Button */}
+              <button
+                onClick={() =>
+                  setMode(mode === "historical" ? "realtime" : "historical")
+                }
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  mode === "realtime"
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-gray-300 text-gray-800 hover:bg-gray-400"
+                }`}
+              >
+                {mode === "realtime" ? "Real-Time" : "Historical"}
+              </button>
+
+              {/* Logout Button */}
+              <button
+                onClick={() => {
+                  logout();
+                  navigate("/login");
+                }}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs"
+              >
+                Logout
+              </button>
+            </div>
           </div>
+
           {/* Column 2: Simulated + Real Value */}
           <div className="flex-1 min-w-0 h-full border border-green-300 bg-green-50 p-2 rounded-md shadow-sm flex flex-col overflow-auto">
             {/* Simulated Value */}
