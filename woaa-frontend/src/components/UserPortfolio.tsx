@@ -150,7 +150,7 @@ export function UserPortfolio(): JSX.Element {
       const initialSim = settings.initial_sim_balance ?? 10000;
 
       updateBalances.mutate(
-        { sim_balance: initialSim },
+        { sim_balance: initialSim, real_balance: 0 },
         {
           onSuccess: () => {
             console.log("[Reset Data] sim_balance reset to", initialSim);
