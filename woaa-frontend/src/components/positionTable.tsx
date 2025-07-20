@@ -61,14 +61,24 @@ export function PositionTable(): JSX.Element {
   }
 
   const handleDelete = (p: any) => {
+    console.log("[Delete] Sim Balance Before:", user?.sim_balance);
+
     deleteMutation.mutate(p.id, {
       onSuccess: () => {
         if (user && p.status === "open") {
           const refund =
             p.open_price *
             (p.position_type === "Long" ? p.open_shares : -p.open_shares);
+
+          const updatedSimBalance = parseFloat(
+            (user.sim_balance + refund).toFixed(2)
+          );
+
+          console.log("[Delete] Refund Amount:", refund);
+          console.log("[Delete] Sim Balance After:", updatedSimBalance);
+
           updateBalances.mutate({
-            sim_balance: parseFloat((user.sim_balance + refund).toFixed(2)),
+            sim_balance: updatedSimBalance,
           });
         }
       },
@@ -84,18 +94,38 @@ export function PositionTable(): JSX.Element {
     const fee = settings.power_up_fee ?? 0;
     const isReal = settings.power_up_type === "real";
 
-    // Step 1: charge the fee
     const updatedBalances: { sim_balance?: number; real_balance?: number } = {};
+
+    // === Refund Calculation ===
+    const refund =
+      position.open_price *
+      (position.position_type === "Long"
+        ? position.open_shares
+        : -position.open_shares);
+
     if (isReal) {
-      updatedBalances.real_balance = parseFloat(
-        ((user.real_balance ?? 0) - fee).toFixed(2)
-      );
+      const before = user.real_balance ?? 0;
+      const after = parseFloat((before - fee).toFixed(2));
+
+      updatedBalances.real_balance = after;
+
+      console.log("[PowerUp] Real Balance Before:", before);
+      console.log("[PowerUp] Fee:", fee);
+      console.log("[PowerUp] Real Balance After Fee:", after);
+      console.log("[PowerUp] No refund applied for real mode.");
     } else {
-      updatedBalances.sim_balance = parseFloat(
-        ((user.sim_balance ?? 0) - fee).toFixed(2)
-      );
+      const before = user.sim_balance ?? 0;
+      const after = parseFloat((before - fee + refund).toFixed(2));
+
+      updatedBalances.sim_balance = after;
+
+      console.log("[PowerUp] Sim Balance Before:", before);
+      console.log("[PowerUp] Fee:", fee);
+      console.log("[PowerUp] Refund:", refund);
+      console.log("[PowerUp] Sim Balance After:", after);
     }
 
+    // Step 1: charge fee and apply refund
     updateBalances.mutate(updatedBalances);
 
     // Step 2: delete the position

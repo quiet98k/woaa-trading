@@ -101,16 +101,16 @@ export function UserPortfolio(): JSX.Element {
   useEffect(() => {
     if (!initial || !settings) return;
 
-    console.log("[Threshold Check]", {
-      simBalance: sim,
-      initialBalance: initial,
-      borrowedMargin: borrowed,
-      profit,
-      netWorth,
-      winThreshold: winAmount,
-      lossThreshold: loseAmount,
-      unrealizedShortValue,
-    });
+    // console.log("[Threshold Check]", {
+    //   simBalance: sim,
+    //   initialBalance: initial,
+    //   borrowedMargin: borrowed,
+    //   profit,
+    //   netWorth,
+    //   winThreshold: winAmount,
+    //   lossThreshold: loseAmount,
+    //   unrealizedShortValue,
+    // });
 
     if (profit >= winAmount) {
       console.log(
