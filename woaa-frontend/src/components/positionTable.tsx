@@ -22,7 +22,7 @@ export function PositionTable(): JSX.Element {
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const deleteMutation = useDeletePosition();
   const { openPrices, mode } = useContext(ChartContext);
-  const { clock, loading: clockLoading } = useMarketClock();
+  const { clock } = useMarketClock();
 
   const symbols = positions?.map((p) => p.symbol) ?? [];
   const { latestBars } = useRealTimeData(mode === "realtime" ? symbols : []);
