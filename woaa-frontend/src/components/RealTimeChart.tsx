@@ -19,7 +19,7 @@ function RealTimeChart() {
           "hide_legend": false,
           "hide_volume": false,
           "hotlist": false,
-          "interval": "D",
+          "interval": "1",
           "locale": "en",
           "save_image": true,
           "style": "1",

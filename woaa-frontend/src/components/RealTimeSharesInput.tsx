@@ -7,6 +7,9 @@ import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
 
 export default function RealTimeSharesInput(): JSX.Element {
+  const createTransaction = useCreateTransaction();
+  const createPosition = useCreatePosition();
+
   const [symbol, setSymbol] = useState("");
   const [shares, setShares] = useState<number>(1);
   const [trackedSymbol, setTrackedSymbol] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export default function RealTimeSharesInput(): JSX.Element {
       return;
     }
 
-    useCreateTransaction().mutate(
+    createTransaction.mutate(
       {
         symbol: trackedSymbol,
         shares,
@@ -70,7 +73,7 @@ export default function RealTimeSharesInput(): JSX.Element {
       },
       {
         onSuccess: () => {
-          useCreatePosition().mutate({
+          createPosition.mutate({
             symbol: trackedSymbol,
             position_type: type,
             open_price: openPrice,
