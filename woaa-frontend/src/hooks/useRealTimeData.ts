@@ -1,10 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
-type MessageHandler = (msg: any) => void;
-
-export function useRealTimeData(symbol: string, onMessage?: MessageHandler) {
+export function useRealTimeData(onMessage?: (msg: any) => void) {
   const [connected, setConnected] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -13,28 +10,44 @@ export function useRealTimeData(symbol: string, onMessage?: MessageHandler) {
 
     ws.onopen = () => {
       setConnected(true);
-      ws.send(JSON.stringify({ action: "subscribe", symbol }));
+      console.log("✅ WebSocket connected");
     };
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      setMessages((prev) => [...prev, data]);
-      if (onMessage) onMessage(data);
+      if (typeof onMessage === "function") {
+        onMessage(data);
+      }
     };
 
     ws.onerror = (err) => {
-      console.error("WebSocket error:", err);
+      console.error("❌ WebSocket error:", err);
     };
 
     ws.onclose = () => {
       setConnected(false);
-      console.log("WebSocket closed");
+      console.warn("🔌 WebSocket closed");
     };
 
     return () => {
       ws.close();
     };
-  }, [symbol]);
+  }, []);
 
-  return { connected, messages };
+  const subscribe = useCallback((symbol: string) => {
+    const trimmed = symbol.trim().toUpperCase();
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          action: "subscribe",
+          symbol: trimmed,
+        })
+      );
+    }
+  }, []);
+
+  return {
+    connected,
+    subscribe,
+  };
 }

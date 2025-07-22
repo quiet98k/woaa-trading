@@ -1,4 +1,4 @@
-import { type JSX, useContext, useState } from "react";
+import { type JSX, useContext, useEffect, useState } from "react";
 import {
   useMyPositions,
   useDeletePosition,
@@ -24,8 +24,26 @@ export function PositionTable(): JSX.Element {
   const { openPrices, mode } = useContext(ChartContext);
   const { clock } = useMarketClock();
 
+  const [latestPrices, setLatestPrices] = useState<Record<string, number>>({});
+  const { subscribe } = useRealTimeData((data) => {
+    const msg = Array.isArray(data) ? data[0] : data;
+    if (msg?.T === "t" && typeof msg.S === "string") {
+      setLatestPrices((prev) => ({
+        ...prev,
+        [msg.S]: msg.p,
+      }));
+    }
+  });
+
   const symbols = positions?.map((p) => p.symbol) ?? [];
-  const { latestBars } = useRealTimeData(mode === "realtime" ? symbols : []);
+
+  useEffect(() => {
+    if (mode === "realtime") {
+      symbols.forEach((sym) => {
+        subscribe(sym);
+      });
+    }
+  }, [mode, symbols, subscribe]);
 
   const createTransaction = useCreateTransaction();
   const { data: settings } = useUserSettings();
@@ -303,9 +321,13 @@ export function PositionTable(): JSX.Element {
 
                   if (mode === "historical") {
                     currentPrice = openPrices[p.symbol] ?? null;
-                  } else if (mode === "realtime" && clock?.is_open) {
-                    currentPrice = latestBars[p.symbol]?.c ?? null;
                   }
+                  else if (mode === "realtime" && clock?.is_open) {
+                    currentPrice = latestPrices[p.symbol] ?? null;
+                  }
+                  // else if (mode === "realtime") {
+                  //   currentPrice = latestPrices[p.symbol] ?? null;
+                  // }
 
                   const unrealizedPL =
                     currentPrice !== null && p.status === "open"

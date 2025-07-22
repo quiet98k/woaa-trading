@@ -10,20 +10,42 @@ import { logout } from "../api/auth";
 import * as Dialog from "@radix-ui/react-dialog";
 import { ChartContext } from "../pages/Dashboard";
 import { useUpdatePause } from "../hooks/useUserSettings";
+import { useRealTimeData } from "../hooks/useRealTimeData";
+import { useMarketClock } from "../hooks/useMarketClock";
 
 /**
  * @fileoverview Fully self-contained user portfolio panel including user info, balances, and calculated profit with win/loss modal triggers.
  */
 
 export function UserPortfolio(): JSX.Element {
+  const [latestPrices, setLatestPrices] = useState<Record<string, number>>({});
+
   const navigate = useNavigate();
   const { data: user } = useMe();
   const { data: settings } = useUserSettings();
   const { data: positions } = useMyPositions();
-  const { openPrices } = useContext(ChartContext);
+  const { mode, setMode } = useContext(ChartContext);
+  const { openPrices: historicalPrices } = useContext(ChartContext);
+  const { subscribe } = useRealTimeData((data) => {
+    const msg = Array.isArray(data) ? data[0] : data;
+    if (msg?.T === "t" && typeof msg.S === "string") {
+      setLatestPrices((prev) => ({
+        ...prev,
+        [msg.S]: msg.p,
+      }));
+    }
+  });
+  useEffect(() => {
+    if (mode === "realtime") {
+      const symbols = positions?.map((p) => p.symbol) ?? [];
+      symbols.forEach((symbol) => {
+        subscribe(symbol);
+      });
+    }
+  }, [mode, positions, subscribe]);
   const updateUser = useUpdateUserBalances(user?.id ?? "");
   const updatePause = useUpdatePause();
-  const { mode, setMode } = useContext(ChartContext);
+
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const updateUserSettings = useUpdateUserSettings(user?.id ?? "");
   const deletePositionMutation = useDeletePosition();
@@ -36,6 +58,9 @@ export function UserPortfolio(): JSX.Element {
   const [newRealValue, setNewRealValue] = useState<number>(
     user?.real_balance ?? 0
   );
+
+  const { clock } = useMarketClock();
+  const marketClosed = mode === "realtime" && !clock?.is_open;
 
   const [winModal, setWinModal] = useState(false);
   const [loseModal, setLoseModal] = useState(false);
@@ -50,7 +75,10 @@ export function UserPortfolio(): JSX.Element {
     (
       positions?.reduce((total, p) => {
         if (p.position_type === "Short" && p.status === "open") {
-          const currentPrice = openPrices[p.symbol];
+          const currentPrice =
+            mode === "realtime"
+              ? latestPrices[p.symbol]
+              : historicalPrices[p.symbol];
 
           if (currentPrice === undefined || currentPrice === null) {
             console.error(`Missing current price for symbol: ${p.symbol}`);
@@ -68,7 +96,11 @@ export function UserPortfolio(): JSX.Element {
     (
       positions?.reduce((total, p) => {
         if (p.position_type === "Long" && p.status === "open") {
-          const currentPrice = openPrices[p.symbol];
+          const currentPrice =
+            mode === "realtime"
+              ? latestPrices[p.symbol]
+              : historicalPrices[p.symbol];
+
           if (currentPrice === undefined || currentPrice === null) {
             console.error(
               `Missing current price for LONG position: ${p.symbol}`
@@ -133,7 +165,8 @@ export function UserPortfolio(): JSX.Element {
     loseAmount,
     settings,
     positions,
-    openPrices,
+    historicalPrices,
+    latestPrices,
   ]);
 
   // keep track of previous mode to detect changes
@@ -389,18 +422,36 @@ export function UserPortfolio(): JSX.Element {
           <div className="flex-1 min-w-0 h-full border border-indigo-300 bg-indigo-50 p-2 rounded-md shadow-sm flex flex-col overflow-auto gap-2">
             <div className="flex justify-between items-center text-sm">
               <span>Profit:</span>
-              <span className={`text-base font-semibold ${profitColor}`}>
+              <span
+                className={`text-base font-semibold ${
+                  marketClosed ? "text-gray-400" : profitColor
+                }`}
+                title={
+                  marketClosed ? "Market closed — live profit disabled" : ""
+                }
+              >
                 $
-                {profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                {marketClosed
+                  ? "—"
+                  : profit.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
               </span>
             </div>
             <div className="flex justify-between items-center text-sm">
               <span>Net Worth:</span>
-              <span className="font-semibold text-black">
+              <span
+                className={`font-semibold ${
+                  marketClosed ? "text-gray-400" : "text-black"
+                }`}
+                title={marketClosed ? "Market closed — net worth disabled" : ""}
+              >
                 $
-                {netWorth.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                })}
+                {marketClosed
+                  ? "—"
+                  : netWorth.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                    })}
               </span>
             </div>
           </div>

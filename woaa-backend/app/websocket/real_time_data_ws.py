@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-ALPACA_URL = "wss://stream.data.alpaca.markets/v2/test"
+# ALPACA_URL = "wss://stream.data.alpaca.markets/v2/test"
+ALPACA_URL = "wss://stream.data.alpaca.markets/v2/iex"
 API_KEY = os.getenv("ALPACA_API_KEY")
 API_SECRET = os.getenv("ALPACA_SECRET_KEY")
 

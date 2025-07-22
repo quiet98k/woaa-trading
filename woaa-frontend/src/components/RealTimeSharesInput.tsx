@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useRef, useState, type JSX } from "react";
 import { useCreateTransaction } from "../hooks/useTransactions";
 import { useCreatePosition } from "../hooks/usePositions";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
@@ -13,30 +13,53 @@ export default function RealTimeSharesInput(): JSX.Element {
   const [symbol, setSymbol] = useState("");
   const [shares, setShares] = useState<number>(1);
   const [trackedSymbol, setTrackedSymbol] = useState<string | null>(null);
+  const [tradePrice, setTradePrice] = useState<number | null>(null);
+  const [tradeTime, setTradeTime] = useState<string | null>(null);
+  const trackedSymbolRef = useRef<string | null>(null);
 
   const { data: user } = useMe();
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const { data: settings } = useUserSettings();
-
   const { clock, loading: clockLoading } = useMarketClock();
-  const { latestBars } = useRealTimeData(trackedSymbol ? [trackedSymbol] : []);
 
-  const latestBar = trackedSymbol ? latestBars[trackedSymbol] : undefined;
-  const openPrice = latestBar?.c; // use close price as latest
+  const marketOpen = clock?.is_open;
+
+  const { subscribe } = useRealTimeData((data) => {
+    if (!trackedSymbolRef.current) return;
+
+    const msg = Array.isArray(data) ? data[0] : data;
+
+    if (msg?.T === "t") {
+      const match = msg.S === trackedSymbolRef.current;
+      console.log(
+        `[${match ? "✅ Match" : "🚫 Mismatch"}] Trade for ${msg.S} @ $${
+          msg.p
+        } — tracking ${trackedSymbolRef.current}`
+      );
+      if (match) {
+        setTradePrice(msg.p);
+        setTradeTime(msg.t); // save the timestamp
+      }
+    }
+  });
 
   const handleStartTracking = () => {
     const trimmed = symbol.trim().toUpperCase();
-    if (trimmed) setTrackedSymbol(trimmed);
+    if (trimmed) {
+      trackedSymbolRef.current = trimmed; // <== set ref
+      setTrackedSymbol(trimmed); // just for UI
+      subscribe(trimmed);
+    }
   };
 
   const handleTrade = (type: "Long" | "Short") => {
-    if (!user || !settings || !openPrice || !trackedSymbol) return;
+    if (!user || !settings || !tradePrice || !trackedSymbol) return;
     if (shares <= 0) {
       alert("Shares must be greater than 0.");
       return;
     }
 
-    const baseCost = parseFloat((shares * openPrice).toFixed(2));
+    const baseCost = parseFloat((shares * tradePrice).toFixed(2));
     const commissionRaw = baseCost * settings.commission_rate;
     const commission = parseFloat(commissionRaw.toFixed(2));
 
@@ -65,7 +88,7 @@ export default function RealTimeSharesInput(): JSX.Element {
       {
         symbol: trackedSymbol,
         shares,
-        price: openPrice,
+        price: tradePrice,
         action: type === "Long" ? "buy" : "short",
         notes: "",
         commission_charged: commission,
@@ -76,7 +99,7 @@ export default function RealTimeSharesInput(): JSX.Element {
           createPosition.mutate({
             symbol: trackedSymbol,
             position_type: type,
-            open_price: openPrice,
+            open_price: tradePrice,
             open_shares: shares,
           });
 
@@ -88,8 +111,6 @@ export default function RealTimeSharesInput(): JSX.Element {
       }
     );
   };
-
-  const marketOpen = clock?.is_open;
 
   return (
     <div className="flex flex-col gap-2 w-full">
@@ -110,14 +131,52 @@ export default function RealTimeSharesInput(): JSX.Element {
         </button>
       </div>
 
+      {/* Price Display */}
+
+      {/* {trackedSymbol && (
+        <>
+          {clockLoading ? (
+            <p className="text-xs text-gray-600">Checking market status...</p>
+          ) : marketOpen ? (
+            tradePrice ? (
+              <p className="text-xs text-gray-600">
+                {trackedSymbol} @ ${tradePrice.toFixed(2)}
+                {tradeTime && (
+                  <span className="ml-2 text-gray-400">
+                    ({new Date(tradeTime).toLocaleTimeString()})
+                  </span>
+                )}
+              </p>
+            ) : (
+              <p className="text-xs text-orange-500">Waiting for price...</p>
+            )
+          ) : tradePrice ? (
+            <p className="text-xs text-gray-600">
+              {trackedSymbol} @ ${tradePrice.toFixed(2)}
+              {tradeTime && (
+                <span className="ml-2 text-gray-400">
+                  ({new Date(tradeTime).toLocaleTimeString()})
+                </span>
+              )}
+            </p>
+          ) : (
+            <p className="text-xs text-orange-500">Waiting for price...</p>
+          )}
+        </>
+      )} */}
       {trackedSymbol && (
         <>
           {clockLoading ? (
             <p className="text-xs text-gray-600">Checking market status...</p>
           ) : marketOpen ? (
-            openPrice ? (
+            tradePrice ? (
               <p className="text-xs text-gray-600">
-                {trackedSymbol} @ ${openPrice.toFixed(2)}
+                {trackedSymbol} @ ${tradePrice.toFixed(2)}
+                {tradeTime && (
+                  <span className="ml-2 text-gray-400">
+                    ({new Date(tradeTime).toLocaleTimeString()})
+                  </span>
+                )}
               </p>
             ) : (
               <p className="text-xs text-orange-500">Waiting for price...</p>
@@ -144,14 +203,16 @@ export default function RealTimeSharesInput(): JSX.Element {
       <div className="flex gap-2">
         <button
           onClick={() => handleTrade("Long")}
-          disabled={!openPrice || !marketOpen}
+          disabled={!tradePrice || !marketOpen}
+          // disabled={!tradePrice}
           className="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs py-1 rounded-md disabled:opacity-50"
         >
           Buy
         </button>
         <button
           onClick={() => handleTrade("Short")}
-          disabled={!openPrice || !marketOpen}
+          disabled={!tradePrice || !marketOpen}
+          // disabled={!tradePrice}
           className="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs py-1 rounded-md disabled:opacity-50"
         >
           Short
