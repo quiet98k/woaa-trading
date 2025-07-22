@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 
 const TestRealTimePage: React.FC = () => {

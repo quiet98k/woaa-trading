@@ -31,11 +31,11 @@ export default function RealTimeSharesInput(): JSX.Element {
 
     if (msg?.T === "t") {
       const match = msg.S === trackedSymbolRef.current;
-      console.log(
-        `[${match ? "✅ Match" : "🚫 Mismatch"}] Trade for ${msg.S} @ $${
-          msg.p
-        } — tracking ${trackedSymbolRef.current}`
-      );
+      // console.log(
+      //   `[${match ? "✅ Match" : "🚫 Mismatch"}] Trade for ${msg.S} @ $${
+      //     msg.p
+      //   } — tracking ${trackedSymbolRef.current}`
+      // );
       if (match) {
         setTradePrice(msg.p);
         setTradeTime(msg.t); // save the timestamp
