@@ -16,6 +16,8 @@ from app.database import sync_engine, Base
 from app.api import auth
 from app.api import user, position, user_setting, transaction, simulation_ws, log
 from app.tasks.simulation import update_simulation_time   # Add more routers as needed
+from app.websocket.real_time_data_ws import alpaca_ws_manager
+from app.websocket.router import router as real_time_data_router
 
 # Load environment variables from .env file
 load_dotenv()
@@ -35,8 +37,9 @@ logging.basicConfig(
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Async context manager for FastAPI lifespan events.
-    Initializes DB and optionally launches background sim clock task.
+    Initializes DB and launches background tasks (e.g., Alpaca connection).
     """
+    # --- DB check ---
     try:
         with sync_engine.connect() as conn:
             result = conn.execute(text("SELECT 1"))
@@ -45,21 +48,32 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as e:
         print("❌ Failed to connect to DB:", e)
 
-    # Conditionally start the simulation updater (skip in test mode)
-    task = None
+    # --- Background tasks ---
+    sim_task = None
     if os.getenv("TESTING") != "1":
-        task = asyncio.create_task(update_simulation_time())
+        sim_task = asyncio.create_task(update_simulation_time())
         print("🕒 Simulation updater started")
+
+    alpaca_task = asyncio.create_task(alpaca_ws_manager.connect())
+    print("📡 Alpaca WebSocket manager started")
 
     try:
         yield  # App is running
     finally:
-        if task:
-            task.cancel()
+        # Cleanup tasks
+        if sim_task:
+            sim_task.cancel()
             try:
-                await task
+                await sim_task
             except asyncio.CancelledError:
                 print("🛑 Simulation updater stopped")
+
+        if alpaca_task:
+            alpaca_task.cancel()
+            try:
+                await alpaca_task
+            except asyncio.CancelledError:
+                print("🛑 Alpaca WebSocket manager stopped")
 
 
 
@@ -108,6 +122,7 @@ app.include_router(user_setting.router)
 app.include_router(transaction.router)
 app.include_router(simulation_ws.router)
 app.include_router(log.router)
+app.include_router(real_time_data_router)
 
 
 
