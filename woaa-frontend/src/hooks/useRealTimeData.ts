@@ -1,134 +1,40 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useMarketClock } from "./useMarketClock";
+import { useEffect, useRef, useState } from "react";
 
-type MinuteBar = {
-  T: "b";
-  S: string;
-  o: number;
-  h: number;
-  l: number;
-  c: number;
-  v: number;
-  n: number;
-  vw: number;
-  t: string;
-};
+type MessageHandler = (msg: any) => void;
 
-type BarMap = Record<string, MinuteBar>;
-
-export function useRealTimeData(symbols: string[]) {
-  const isOpen = useMarketClock();
-  const socketRef = useRef<WebSocket | null>(null);
-  const [latestBars, setLatestBars] = useState<BarMap>({});
-  const [connectionStatus, setConnectionStatus] = useState<
-    "connected" | "disconnected"
-  >("disconnected");
-  const [authStatus, setAuthStatus] = useState<
-    "pending" | "authenticated" | "failed"
-  >("pending");
-
-  const symbolKey = useMemo(() => symbols.join(","), [symbols]);
+export function useRealTimeData(symbol: string, onMessage?: MessageHandler) {
+  const [connected, setConnected] = useState(false);
+  const [messages, setMessages] = useState<any[]>([]);
+  const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    console.log("🧠 useRealTimeData effect running", { isOpen, symbols });
+    const ws = new WebSocket("ws://localhost:8000/ws/market");
+    wsRef.current = ws;
 
-    if (isOpen.loading) {
-      console.log("⏳ Waiting for market status...");
-      return;
-    }
-
-    if (!isOpen.clock?.is_open) {
-      console.log("📴 Market closed. Waiting for market to open...");
-      //   return;
-    }
-
-    if (symbols.length === 0) {
-      console.log("⚠️ No symbols to subscribe to.");
-      return;
-    }
-
-    if (socketRef.current) {
-      console.warn("🧹 Cleaning up previous socket before new connection");
-      socketRef.current.close();
-      socketRef.current = null;
-    }
-
-    console.log("🚀 Connecting to WebSocket...");
-
-    const socket = new WebSocket("wss://stream.data.alpaca.markets/v2/iex");
-    socketRef.current = socket;
-    setConnectionStatus("connected");
-    setAuthStatus("pending");
-
-    socket.onopen = () => {
-      console.log("🔌 WebSocket opened");
-      // ✅ Don't send auth here anymore
+    ws.onopen = () => {
+      setConnected(true);
+      ws.send(JSON.stringify({ action: "subscribe", symbol }));
     };
 
-    socket.onmessage = (event) => {
+    ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      const messages = Array.isArray(data) ? data : [data];
-
-      for (const msg of messages) {
-        console.log("📨 Received:", msg);
-
-        // ✅ Send auth only when connection is confirmed
-        if (msg.T === "success" && msg.msg === "connected") {
-          console.log("🔐 Sending auth...");
-          socket.send(
-            JSON.stringify({
-              action: "auth",
-              key: import.meta.env.VITE_ALPACA_API_KEY,
-              secret: import.meta.env.VITE_ALPACA_SECRET_KEY,
-            })
-          );
-          setAuthStatus("pending");
-        }
-
-        if (msg.T === "error") {
-          console.error("❌ WS Error:", msg.msg);
-          setAuthStatus("failed");
-          socket.close();
-          return;
-        }
-
-        if (msg.T === "success" && msg.msg === "authenticated") {
-          console.log("✅ Authenticated!");
-          setAuthStatus("authenticated");
-
-          socket.send(
-            JSON.stringify({
-              action: "subscribe",
-              bars: symbols,
-            })
-          );
-        }
-
-        if (msg.T === "b" && symbols.includes(msg.S)) {
-          setLatestBars((prev) => ({ ...prev, [msg.S]: msg }));
-        }
-      }
+      setMessages((prev) => [...prev, data]);
+      if (onMessage) onMessage(data);
     };
 
-    socket.onerror = (err) => {
-      console.error("⚠️ WebSocket error:", err);
+    ws.onerror = (err) => {
+      console.error("WebSocket error:", err);
     };
 
-    socket.onclose = () => {
-      console.warn("🔌 WebSocket closed");
-      socketRef.current = null;
-      setConnectionStatus("disconnected");
+    ws.onclose = () => {
+      setConnected(false);
+      console.log("WebSocket closed");
     };
 
     return () => {
-      console.log("🧼 useEffect cleanup running...");
-      if (socketRef.current?.readyState === WebSocket.OPEN) {
-        socketRef.current.close();
-      }
-      socketRef.current = null;
-      setConnectionStatus("disconnected");
+      ws.close();
     };
-  }, [isOpen.loading, isOpen.clock?.is_open, symbolKey]);
+  }, [symbol]);
 
-  return { latestBars, connectionStatus, authStatus };
+  return { connected, messages };
 }
