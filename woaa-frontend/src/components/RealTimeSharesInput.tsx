@@ -48,6 +48,8 @@ export default function RealTimeSharesInput(): JSX.Element {
     if (trimmed) {
       trackedSymbolRef.current = trimmed; // <== set ref
       setTrackedSymbol(trimmed); // just for UI
+      setTradePrice(null); // Clear old price
+      setTradeTime(null); // Clear old timestamp
       subscribe(trimmed);
     }
   };
