@@ -72,7 +72,7 @@ export async function fetchHistoricalBars(
     timeframe = "1Day",
     limit = 10000,
     adjustment = "raw",
-    feed = "sip",
+    feed = "iex",
     asof,
     sort = "asc",
   } = options;
