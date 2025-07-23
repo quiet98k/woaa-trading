@@ -1,26 +1,48 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 
 const TestRealTimePage: React.FC = () => {
   const [messages, setMessages] = useState<any[]>([]);
-  const [symbol, setSymbol] = useState("FAKEPACA");
-  const [tracking, setTracking] = useState(false);
+  const [symbol, setSymbol] = useState("AAPL");
+  const [trackingSymbol, setTrackingSymbol] = useState<string | null>(null);
+  const [subscriptions, setSubscriptions] = useState<string[]>([]);
 
-  const { connected, subscribe } = useRealTimeData((data) => {
-    const payload = Array.isArray(data) ? data[0] : data;
-    setMessages((prev) => [...prev, payload]);
-  });
+  const { connected, subscribe, unsubscribe, getSubscriptions } =
+    useRealTimeData((data) => {
+      const payload = Array.isArray(data) ? data[0] : data;
 
-  const handleTrack = () => {
+      if (payload?.type === "subscriptions") {
+        setSubscriptions(payload.symbols ?? []);
+      } else {
+        setMessages((prev) => [...prev, payload]);
+      }
+    });
+
+  const handleSubscribe = () => {
     const trimmed = symbol.trim().toUpperCase();
     if (trimmed && connected) {
       subscribe(trimmed);
-      setTracking(true);
+      setTrackingSymbol(trimmed);
+      setMessages([]);
+      setTimeout(() => getSubscriptions(), 200); // Delay to allow server to register
     }
   };
 
+  const handleUnsubscribe = () => {
+    const trimmed = symbol.trim().toUpperCase();
+    if (trimmed && connected) {
+      unsubscribe(trimmed);
+      if (trackingSymbol === trimmed) setTrackingSymbol(null);
+      setTimeout(() => getSubscriptions(), 200);
+    }
+  };
+
+  useEffect(() => {
+    if (connected) getSubscriptions();
+  }, [connected]);
+
   return (
-    <div className="p-6 ">
+    <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Test Real-Time Page</h1>
 
       <p className="mb-2">
@@ -36,13 +58,27 @@ const TestRealTimePage: React.FC = () => {
           className="border border-gray-300 px-2 py-1 rounded-md text-sm"
         />
         <button
-          onClick={handleTrack}
+          onClick={handleSubscribe}
           disabled={!connected}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm disabled:opacity-50 "
+          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm disabled:opacity-50"
         >
-          {tracking ? "Tracking..." : "Start Tracking"}
+          Subscribe
+        </button>
+        <button
+          onClick={handleUnsubscribe}
+          disabled={!connected}
+          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm disabled:opacity-50"
+        >
+          Unsubscribe
         </button>
       </div>
+
+      {subscriptions.length > 0 && (
+        <p className="mb-4 text-sm">
+          Server says you're tracking:{" "}
+          <strong>{subscriptions.join(", ")}</strong>
+        </p>
+      )}
 
       <div className="bg-gray-100 p-4 rounded max-h-96 overflow-y-auto shadow text-black">
         {messages.map((msg, idx) => (

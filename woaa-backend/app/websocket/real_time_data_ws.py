@@ -14,7 +14,6 @@ API_SECRET = os.getenv("ALPACA_SECRET_KEY")
 
 
 
-
 class AlpacaWebSocketManager:
     def __init__(self):
         self.subscribers: dict[WebSocket, set[str]] = {}
@@ -43,6 +42,22 @@ class AlpacaWebSocketManager:
                 "trades": [symbol]
             }))
             self.symbols.add(symbol)
+            
+    async def unsubscribe_symbol(self, websocket: WebSocket, symbol: str):
+        if websocket in self.subscribers and symbol in self.subscribers[websocket]:
+            self.subscribers[websocket].remove(symbol)
+
+            # Check if any other client is still subscribed to this symbol
+            still_used = any(
+                symbol in other_symbols
+                for other_ws, other_symbols in self.subscribers.items()
+            )
+            if not still_used:
+                await self.ws.send(json.dumps({
+                    "action": "unsubscribe",
+                    "trades": [symbol]
+                }))
+                self.symbols.discard(symbol)
 
     async def receive_data(self):
         async for message in self.ws:
@@ -73,6 +88,10 @@ class AlpacaWebSocketManager:
                     "trades": [symbol]
                 }))
                 self.symbols.discard(symbol)
+                
+    def get_my_subscribed_symbols(self, websocket: WebSocket) -> set[str]:
+        return self.subscribers.get(websocket, set())
+                
     def print_status(self):
         print(f"🔌 Connections: {len(self.subscribers)}")
         print(f"📈 Subscribed symbols: {self.symbols}")
