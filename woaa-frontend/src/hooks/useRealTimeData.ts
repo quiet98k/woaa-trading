@@ -9,7 +9,9 @@ export function useRealTimeData(onMessage?: (msg: any) => void) {
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8000/ws/market");
+    const ws = new WebSocket(
+      `${import.meta.env.VITE_API_URL.replace(/^http/, "ws")}/ws/market`
+    );
     wsRef.current = ws;
 
     ws.onopen = () => {
