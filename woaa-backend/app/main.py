@@ -14,10 +14,11 @@ from typing import AsyncGenerator
 
 from app.database import sync_engine, Base
 from app.api import auth
-from app.api import user, position, user_setting, transaction, simulation_ws, log
+from app.api import user, position, user_setting, transaction, simulation_ws, log, data
+from websocket import real_time_trades
 from app.tasks.simulation import update_simulation_time   # Add more routers as needed
-from app.websocket.real_time_data_ws import alpaca_ws_manager
-from app.websocket.router import router as real_time_data_router
+from websocket.real_time_trades import alpaca_ws_manager 
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -122,9 +123,5 @@ app.include_router(user_setting.router)
 app.include_router(transaction.router)
 app.include_router(simulation_ws.router)
 app.include_router(log.router)
-app.include_router(real_time_data_router)
-
-
-
-
-# app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(real_time_trades.router)
+app.include_router(data.router)

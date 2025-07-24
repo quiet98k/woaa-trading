@@ -59,7 +59,7 @@ def advance_market_time(start: datetime, seconds: float) -> datetime:
         logger.debug(f"[advance_market_time] Advanced by {step} seconds, now at {current}, remaining: {seconds}")
 
         if step == time_left_today:
-            logger.debug(f"[advance_market_time] Reached market close, advancing to next open")
+            logger.debug(f"[advance_market_time] Reached market close, advancing to next open")  # noqa: F541
             current = next_market_open(current)
 
     logger.debug(f"[advance_market_time] Final advanced time: {current}")

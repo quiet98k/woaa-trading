@@ -1,7 +1,8 @@
 import os
-import asyncio
+import re
 import json
-from fastapi import WebSocket
+import asyncio
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import websockets
 from websockets.exceptions import ConnectionClosed
 from dotenv import load_dotenv
@@ -11,6 +12,10 @@ load_dotenv()
 ALPACA_URL = "wss://stream.data.alpaca.markets/v2/iex"
 API_KEY = os.getenv("ALPACA_API_KEY")
 API_SECRET = os.getenv("ALPACA_SECRET_KEY")
+
+VALID_SYMBOL_REGEX = re.compile(r"^[A-Z]{1,5}$")  # Optional validation
+
+router = APIRouter()
 
 class AlpacaWebSocketManager:
     def __init__(self):
@@ -23,7 +28,6 @@ class AlpacaWebSocketManager:
         async with self.lock:
             if self.ws and self.ws.close_code is None:
                 return  # already connected
-            
             try:
                 print("[Alpaca WS] Connecting...")
                 self.ws = await websockets.connect(ALPACA_URL)
@@ -35,7 +39,6 @@ class AlpacaWebSocketManager:
                 resp = await self.ws.recv()
                 print("[Alpaca WS] Auth response:", resp)
 
-                # Resubscribe to all current symbols
                 if self.symbols:
                     await self.ws.send(json.dumps({
                         "action": "subscribe",
@@ -94,7 +97,6 @@ class AlpacaWebSocketManager:
                         await sub.send_text(message)
                     except Exception:
                         disconnected.append(sub)
-
                 for sub in disconnected:
                     await self.unregister_client(sub)
         except Exception as e:
@@ -141,3 +143,32 @@ class AlpacaWebSocketManager:
             print(f"  ↪️ Client {id(ws)} -> {symbols}")
 
 alpaca_ws_manager = AlpacaWebSocketManager()
+
+@router.websocket("/ws/market")
+async def market_ws(websocket: WebSocket):
+    await websocket.accept()
+    alpaca_ws_manager.register_client(websocket)
+    alpaca_ws_manager.print_status()
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            action = data.get("action")
+            symbol = data.get("symbol")
+
+            if action == "subscribe" and symbol:
+                await alpaca_ws_manager.subscribe_symbol(websocket, symbol)
+                alpaca_ws_manager.print_status()
+            elif action == "unsubscribe" and symbol:
+                await alpaca_ws_manager.unsubscribe_symbol(websocket, symbol)
+                alpaca_ws_manager.print_status()
+            elif action == "get_subscriptions":
+                symbols = alpaca_ws_manager.get_my_subscribed_symbols(websocket)
+                await websocket.send_text(json.dumps({
+                    "type": "subscriptions",
+                    "symbols": list(symbols)
+                }))
+
+    except WebSocketDisconnect:
+        await alpaca_ws_manager.unregister_client(websocket)
+        alpaca_ws_manager.print_status()

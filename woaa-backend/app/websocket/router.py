@@ -1,7 +1,7 @@
 import json
 import re
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.websocket.real_time_data_ws import alpaca_ws_manager
+from websocket.real_time_trades import alpaca_ws_manager
 
 router = APIRouter()
 
