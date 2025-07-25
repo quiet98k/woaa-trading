@@ -1,6 +1,6 @@
 import asyncio
 import time
-from services.alpaca import fetch_bars_from_alpaca
+from app.services.alpaca import fetch_bars_from_alpaca
 from dateutil import parser
 
 SYMBOLS = [
