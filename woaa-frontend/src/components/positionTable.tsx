@@ -40,7 +40,7 @@ export function PositionTable(): JSX.Element {
   useEffect(() => {
     if (mode === "realtime") {
       symbols.forEach((sym) => {
-        subscribe(sym);
+        subscribe(sym, "trades");
       });
     }
   }, [mode, symbols, subscribe]);
@@ -321,8 +321,7 @@ export function PositionTable(): JSX.Element {
 
                   if (mode === "historical") {
                     currentPrice = openPrices[p.symbol] ?? null;
-                  }
-                  else if (mode === "realtime" && clock?.is_open) {
+                  } else if (mode === "realtime" && clock?.is_open) {
                     currentPrice = latestPrices[p.symbol] ?? null;
                   }
                   // else if (mode === "realtime") {

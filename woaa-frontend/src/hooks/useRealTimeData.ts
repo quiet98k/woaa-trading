@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 const isValidSymbol = (symbol: string) =>
   /^[A-Z]{1,5}$/.test(symbol.trim().toUpperCase());
 
+type SubscriptionType = "trades" | "bars";
+
 export function useRealTimeData(onMessage?: (msg: any) => void) {
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -40,31 +42,37 @@ export function useRealTimeData(onMessage?: (msg: any) => void) {
     };
   }, []);
 
-  const sendMessage = useCallback((action: string, symbol?: string) => {
-    if (symbol && !isValidSymbol(symbol)) {
-      console.warn("❌ Invalid symbol format:", symbol);
-      return;
-    }
-
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      const msg: any = { action };
-      if (symbol) {
-        msg.symbol = symbol.trim().toUpperCase();
+  const sendMessage = useCallback(
+    (action: string, symbol?: string, type: SubscriptionType = "trades") => {
+      if (symbol && !isValidSymbol(symbol)) {
+        console.warn("❌ Invalid symbol format:", symbol);
+        return;
       }
-      wsRef.current.send(JSON.stringify(msg));
-    }
-  }, []);
+
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        const msg: any = { action };
+        if (symbol) {
+          msg.symbol = symbol.trim().toUpperCase();
+        }
+        if (action !== "get_subscriptions") {
+          msg.type = type;
+        }
+        wsRef.current.send(JSON.stringify(msg));
+      }
+    },
+    []
+  );
 
   const subscribe = useCallback(
-    (symbol: string) => {
-      sendMessage("subscribe", symbol);
+    (symbol: string, type: SubscriptionType = "trades") => {
+      sendMessage("subscribe", symbol, type);
     },
     [sendMessage]
   );
 
   const unsubscribe = useCallback(
-    (symbol: string) => {
-      sendMessage("unsubscribe", symbol);
+    (symbol: string, type: SubscriptionType = "trades") => {
+      sendMessage("unsubscribe", symbol, type);
     },
     [sendMessage]
   );

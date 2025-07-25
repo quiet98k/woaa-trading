@@ -21,7 +21,7 @@ const TestRealTimePage: React.FC = () => {
   const handleSubscribe = () => {
     const trimmed = symbol.trim().toUpperCase();
     if (trimmed && connected) {
-      subscribe(trimmed);
+      subscribe(trimmed, "trades");
       setTrackingSymbol(trimmed);
       setMessages([]);
       setTimeout(() => getSubscriptions(), 200); // Delay to allow server to register
@@ -31,7 +31,7 @@ const TestRealTimePage: React.FC = () => {
   const handleUnsubscribe = () => {
     const trimmed = symbol.trim().toUpperCase();
     if (trimmed && connected) {
-      unsubscribe(trimmed);
+      unsubscribe(trimmed, "trades");
       if (trackingSymbol === trimmed) setTrackingSymbol(null);
       setTimeout(() => getSubscriptions(), 200);
     }

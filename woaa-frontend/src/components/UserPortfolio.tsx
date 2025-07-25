@@ -39,7 +39,7 @@ export function UserPortfolio(): JSX.Element {
     if (mode === "realtime") {
       const symbols = positions?.map((p) => p.symbol) ?? [];
       symbols.forEach((symbol) => {
-        subscribe(symbol);
+        subscribe(symbol, "trades");
       });
     }
   }, [mode, positions, subscribe]);

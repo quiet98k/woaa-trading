@@ -50,7 +50,7 @@ export default function RealTimeSharesInput(): JSX.Element {
       setTrackedSymbol(trimmed); // just for UI
       setTradePrice(null); // Clear old price
       setTradeTime(null); // Clear old timestamp
-      subscribe(trimmed);
+      subscribe(trimmed, "trades");
     }
   };
 
