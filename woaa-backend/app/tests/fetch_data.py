@@ -9,7 +9,7 @@ SYMBOLS = [
     # "DIA", "QQQ", "LCID", "VXX"
 ]
 
-async def test_alpaca_latency():
+async def alpaca_latency():
     symbol_str = ",".join(SYMBOLS)
     print(f"{symbol_str = }")
     start_time_iso = "2025-07-22T13:32:00Z"
@@ -50,4 +50,4 @@ async def test_alpaca_latency():
         print(f"       Range: {earliest.isoformat()} → {latest.isoformat()}")
 
 if __name__ == "__main__":
-    asyncio.run(test_alpaca_latency())
+    asyncio.run(alpaca_latency())
