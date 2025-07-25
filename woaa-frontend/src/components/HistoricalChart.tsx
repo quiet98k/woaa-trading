@@ -61,7 +61,6 @@ function getNextMarketDay(date: Date): string {
   return d.toISOString().split("T")[0];
 }
 
-
 export default function Chart() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<IChartApi | null>(null);
@@ -69,7 +68,6 @@ export default function Chart() {
   const lastSimMinute = useRef<number | null>(null);
   const lastCandleTimeRef = useRef<UTCTimestamp | null>(null);
   const { setChartState } = useContext(ChartContext);
-
 
   const [selectedSymbol, setSelectedSymbol] = useState("AAPL");
   const [selectedRange, setSelectedRange] = useState<TimeOption>("1D/1Min");

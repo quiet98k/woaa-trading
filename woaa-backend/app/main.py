@@ -15,9 +15,9 @@ from typing import AsyncGenerator
 from app.database import sync_engine, Base
 from app.api import auth
 from app.api import user, position, user_setting, transaction, simulation_ws, log, data
-from websocket import real_time_trades
+from app.websocket import real_time_trades
 from app.tasks.simulation import update_simulation_time   # Add more routers as needed
-from websocket.real_time_trades import alpaca_ws_manager 
+from app.websocket.real_time_trades import alpaca_ws_manager
 
 
 # Load environment variables from .env file

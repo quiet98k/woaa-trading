@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional, Dict, List, Any
 from app.auth import get_current_user
 from app.models.user import User
-from app.services.fetch_bars_from_alpaca import fetch_bars_from_alpaca
+from app.services.alpaca import fetch_bars_from_alpaca, fetch_market_calendar
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -36,3 +36,11 @@ async def get_historical_bars(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch bars: {e}")
+
+@router.get("/market/calendar")
+async def get_market_calendar(
+    start: str = Query(..., description="Start date in YYYY-MM-DD"),
+    end: str = Query(..., description="End date in YYYY-MM-DD")
+):
+    calendar = await fetch_market_calendar(start, end)
+    return calendar

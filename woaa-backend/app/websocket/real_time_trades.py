@@ -2,6 +2,7 @@ import os
 import re
 import json
 import asyncio
+import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import websockets
 from websockets.exceptions import ConnectionClosed
@@ -9,11 +10,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,  # Change to DEBUG for more verbose output
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
+logger = logging.getLogger(__name__)
+
 ALPACA_URL = "wss://stream.data.alpaca.markets/v2/iex"
 API_KEY = os.getenv("ALPACA_API_KEY")
 API_SECRET = os.getenv("ALPACA_SECRET_KEY")
 
-VALID_SYMBOL_REGEX = re.compile(r"^[A-Z]{1,5}$")  # Optional validation
+VALID_SYMBOL_REGEX = re.compile(r"^[A-Z]{1,5}$")
 
 router = APIRouter()
 
@@ -27,9 +35,9 @@ class AlpacaWebSocketManager:
     async def connect(self):
         async with self.lock:
             if self.ws and self.ws.close_code is None:
-                return  # already connected
+                return
             try:
-                print("[Alpaca WS] Connecting...")
+                logger.debug("Connecting to Alpaca WebSocket...")
                 self.ws = await websockets.connect(ALPACA_URL)
                 await self.ws.send(json.dumps({
                     "action": "auth",
@@ -37,19 +45,19 @@ class AlpacaWebSocketManager:
                     "secret": API_SECRET
                 }))
                 resp = await self.ws.recv()
-                print("[Alpaca WS] Auth response:", resp)
+                logger.debug("Auth response: %s", resp)
 
                 if self.symbols:
                     await self.ws.send(json.dumps({
                         "action": "subscribe",
                         "trades": list(self.symbols)
                     }))
-                    print("[Alpaca WS] Resubscribed to:", self.symbols)
+                    logger.debug("Resubscribed to: %s", self.symbols)
 
                 asyncio.create_task(self.receive_data())
 
             except Exception as e:
-                print(f"[Alpaca WS] Failed to connect: {e}")
+                logger.error("Failed to connect to Alpaca WebSocket: %s", e)
 
     async def subscribe_symbol(self, websocket: WebSocket, symbol: str):
         if websocket not in self.subscribers:
@@ -64,18 +72,16 @@ class AlpacaWebSocketManager:
                     "trades": [symbol]
                 }))
                 self.symbols.add(symbol)
+                logger.debug("Subscribed to symbol: %s", symbol)
             except ConnectionClosed:
-                print(f"[Alpaca WS] Connection closed during subscribe to {symbol}, reconnecting...")
+                logger.warning("Connection closed during subscribe to %s, reconnecting...", symbol)
                 await self.reconnect_and_resubscribe()
 
     async def unsubscribe_symbol(self, websocket: WebSocket, symbol: str):
         if websocket in self.subscribers and symbol in self.subscribers[websocket]:
             self.subscribers[websocket].remove(symbol)
 
-            still_used = any(
-                symbol in other_symbols
-                for other_ws, other_symbols in self.subscribers.items()
-            )
+            still_used = any(symbol in other_symbols for other_symbols in self.subscribers.values())
             if not still_used:
                 await self.ensure_ws()
                 try:
@@ -84,8 +90,9 @@ class AlpacaWebSocketManager:
                         "trades": [symbol]
                     }))
                     self.symbols.discard(symbol)
+                    logger.debug("Unsubscribed from symbol: %s", symbol)
                 except ConnectionClosed:
-                    print(f"[Alpaca WS] Connection closed during unsubscribe from {symbol}, reconnecting...")
+                    logger.warning("Connection closed during unsubscribe from %s, reconnecting...", symbol)
                     await self.reconnect_and_resubscribe()
 
     async def receive_data(self):
@@ -100,7 +107,7 @@ class AlpacaWebSocketManager:
                 for sub in disconnected:
                     await self.unregister_client(sub)
         except Exception as e:
-            print(f"[Alpaca WS] Error in receive loop: {e}")
+            logger.info("Error in receive loop: %s", e)
             await self.reconnect_and_resubscribe()
 
     async def ensure_ws(self):
@@ -108,7 +115,7 @@ class AlpacaWebSocketManager:
             await self.connect()
 
     async def reconnect_and_resubscribe(self):
-        print("[Alpaca WS] Reconnecting and resubscribing...")
+        logger.debug("Reconnecting and resubscribing to Alpaca WebSocket...")
         await self.connect()
 
     def register_client(self, websocket: WebSocket):
@@ -118,10 +125,7 @@ class AlpacaWebSocketManager:
         symbols_to_check = self.subscribers.pop(websocket, set())
 
         for symbol in symbols_to_check:
-            still_used = any(
-                symbol in other_symbols
-                for other_ws, other_symbols in self.subscribers.items()
-            )
+            still_used = any(symbol in other_symbols for other_symbols in self.subscribers.values())
             if not still_used:
                 await self.ensure_ws()
                 try:
@@ -130,17 +134,18 @@ class AlpacaWebSocketManager:
                         "trades": [symbol]
                     }))
                     self.symbols.discard(symbol)
+                    logger.debug("Unsubscribed from %s during cleanup", symbol)
                 except ConnectionClosed:
-                    print(f"[Alpaca WS] Connection closed during unsubscribe cleanup for {symbol}")
+                    logger.warning("Connection closed during unsubscribe cleanup for %s", symbol)
 
     def get_my_subscribed_symbols(self, websocket: WebSocket) -> set[str]:
         return self.subscribers.get(websocket, set())
 
     def print_status(self):
-        print(f"🔌 Connections: {len(self.subscribers)}")
-        print(f"📈 Subscribed symbols: {self.symbols}")
+        logger.debug("🔌 Connections: %d", len(self.subscribers))
+        logger.debug("📈 Subscribed symbols: %s", self.symbols)
         for ws, symbols in self.subscribers.items():
-            print(f"  ↪️ Client {id(ws)} -> {symbols}")
+            logger.debug("  ↪️ Client %s -> %s", id(ws), symbols)
 
 alpaca_ws_manager = AlpacaWebSocketManager()
 

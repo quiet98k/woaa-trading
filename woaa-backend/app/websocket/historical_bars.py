@@ -3,7 +3,7 @@ from app.auth import get_current_user_ws
 from app.database import async_session_maker
 from app.models.user_setting import UserSetting
 from sqlalchemy.future import select
-from app.services.fetch_bars_from_alpaca import fetch_bars_from_alpaca
+from services.alpaca import fetch_bars_from_alpaca
 
 import json
 import asyncio

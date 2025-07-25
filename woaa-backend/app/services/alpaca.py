@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import aiohttp
 import httpx
 from typing import Optional, Dict, List, Any
 from loguru import logger  # Optional: use print() if you prefer
@@ -10,7 +11,8 @@ ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
 # print(f"{ALPACA_API_KEY = }")
 # print(f"{ALPACA_SECRET_KEY = }")
-BASE_URL = "https://data.alpaca.markets/v2/stocks/bars"
+BAR_URL = "https://data.alpaca.markets/v2/stocks/bars"
+CALENDAR_URL = "https://data.alpaca.markets/v2/calendar"
 
 
 async def fetch_bars_from_alpaca(
@@ -50,9 +52,9 @@ async def fetch_bars_from_alpaca(
                 params["page_token"] = page_token
                 logger.info(f"{page_token = }")
 
-            response = await client.get(BASE_URL, headers=headers, params=params)
+            response = await client.get(BAR_URL, headers=headers, params=params)
             if response.status_code != 200:
-                logger.error(f"Alpaca error {response.status_code}: {response.text}")
+                logger.info(f"Alpaca error {response.status_code}: {response.text}")
                 raise Exception(f"Alpaca API error {response.status_code}: {response.text}")
 
             data = response.json()
@@ -67,3 +69,21 @@ async def fetch_bars_from_alpaca(
 
     return all_bars
 
+async def fetch_market_calendar(start: str, end: str) -> dict[str, dict[str, str]]:
+    url = f"{CALENDAR_URL}?start={start}&end={end}"
+    headers = {
+        "APCA-API-KEY-ID": ALPACA_API_KEY,
+        "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY,
+    }
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, headers=headers) as resp:
+            if not resp.status == 200:
+                try:
+                    error_data = await resp.json()
+                    raise RuntimeError(f"Calendar API error: {error_data.get('message')}")
+                except Exception:
+                    raise RuntimeError(f"Calendar API HTTP error: {resp.status}")
+            data = await resp.json()
+
+    return {day["date"]: {"open": day["open"], "close": day["close"]} for day in data}
