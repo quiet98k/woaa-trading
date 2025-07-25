@@ -179,7 +179,7 @@ export default function Chart() {
           labelVisible: true,
         },
         vertLine: {
-          labelVisible: true,
+          labelVisible: false,
         },
       },
     });
@@ -346,7 +346,7 @@ export default function Chart() {
       seriesRef.current.update(updatedBar);
       lastCandleTimeRef.current = Number(updatedBar.time) as UTCTimestamp;
     }
-  }, [simTime, data, selectedSymbol]);
+  }, [simTime, , selectedSymbol]);
 
   return (
     <div className="w-full h-full flex flex-col gap-2 overflow-hidden">
