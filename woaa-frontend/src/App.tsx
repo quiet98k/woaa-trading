@@ -5,6 +5,7 @@ import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
 import AlpacaTest from "./pages/AlpacaTest";
 import TestRealTimePage from "./pages/TestRealTimePage";
+import TestHistoricalWS from "./pages/TestHistoricalWS";
 
 function App() {
   return (
@@ -19,7 +20,8 @@ function App() {
         <Route path="*" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/test-data" element={<AlpacaTest />} />
-        <Route path="/test-real" element={<TestRealTimePage />} />
+        <Route path="/test-real-ws" element={<TestRealTimePage />} />
+        <Route path="/test-hist-ws" element={<TestHistoricalWS />} />
       </Routes>
     </Router>
   );

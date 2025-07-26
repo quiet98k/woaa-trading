@@ -15,10 +15,10 @@ router = APIRouter()
 
 @router.websocket("/ws/data/historical_bars")
 async def stream_historical_bars(websocket: WebSocket):
+    await websocket.accept()
     user = None
     try:
         user = await get_current_user_ws(websocket)
-        await websocket.accept()
         print(f"[WebSocket] User {user.id} connected to historical bars stream")
 
         subscribed_symbols: Dict[str, datetime] = {}
