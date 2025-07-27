@@ -146,75 +146,96 @@ export function UserPortfolio(): JSX.Element {
 
   // Show modal if thresholds reached
   useEffect(() => {
-    const changedDeps: string[] = [];
+    const timeout = setTimeout(() => {
+      const changedDeps: string[] = [];
+      if (prevDeps.current) {
+        if (prevDeps.current.sim !== sim) changedDeps.push("sim");
+        if (prevDeps.current.profit !== profit) changedDeps.push("profit");
+        if (prevDeps.current.initial !== initial) changedDeps.push("initial");
+        if (prevDeps.current.winAmount !== winAmount)
+          changedDeps.push("winAmount");
+        if (prevDeps.current.loseAmount !== loseAmount)
+          changedDeps.push("loseAmount");
+        if (prevDeps.current.settings !== settings)
+          changedDeps.push("settings");
+        if (prevDeps.current.positions !== positions)
+          changedDeps.push("positions");
+        if (prevDeps.current.historicalPrices !== historicalPrices)
+          changedDeps.push("historicalPrices");
+        if (prevDeps.current.latestPrices !== latestPrices)
+          changedDeps.push("latestPrices");
 
-    if (prevDeps.current) {
-      if (prevDeps.current.sim !== sim) changedDeps.push("sim");
-      if (prevDeps.current.profit !== profit) changedDeps.push("profit");
-      if (prevDeps.current.initial !== initial) changedDeps.push("initial");
-      if (prevDeps.current.winAmount !== winAmount)
-        changedDeps.push("winAmount");
-      if (prevDeps.current.loseAmount !== loseAmount)
-        changedDeps.push("loseAmount");
-      if (prevDeps.current.settings !== settings) changedDeps.push("settings");
-      if (prevDeps.current.positions !== positions)
-        changedDeps.push("positions");
-      if (prevDeps.current.historicalPrices !== historicalPrices)
-        changedDeps.push("historicalPrices");
-      if (prevDeps.current.latestPrices !== latestPrices)
-        changedDeps.push("latestPrices");
-
-      if (changedDeps.length > 0) {
-        console.log("[Threshold Check Triggered] Changed:", changedDeps);
+        if (changedDeps.length > 0) {
+          console.log("[Threshold Check Triggered] Changed:", changedDeps);
+        }
       }
-    }
+      // Update previous values
+      prevDeps.current = {
+        sim,
+        profit,
+        initial,
+        winAmount,
+        loseAmount,
+        settings,
+        positions,
+        historicalPrices,
+        latestPrices,
+      };
 
-    // Update previous values
-    prevDeps.current = {
-      sim,
-      profit,
-      initial,
-      winAmount,
-      loseAmount,
-      settings,
-      positions,
-      historicalPrices,
-      latestPrices,
-    };
+      // Ensure all current open positions have valid prices
+      const openSymbols =
+        positions?.filter((p) => p.status === "open").map((p) => p.symbol) ??
+        [];
+      const missingPrices = openSymbols.some((symbol) => {
+        const price =
+          mode === "realtime" ? latestPrices[symbol] : historicalPrices[symbol];
+        return price === undefined || price === null;
+      });
 
-    if (
-      !initial ||
-      !settings ||
-      marketClosed ||
-      isNaN(profit) ||
-      isNaN(netWorth)
-    )
-      return;
+      if (
+        !initial ||
+        !settings ||
+        marketClosed ||
+        isNaN(profit) ||
+        isNaN(netWorth) ||
+        missingPrices
+      ) {
+        if (missingPrices) {
+          console.warn(
+            "[Threshold Check Skipped] Missing price for at least one open position."
+          );
+        }
+        return;
+      }
 
-    // console.log("[Threshold Check]", {
-    //   simBalance: sim,
-    //   initialBalance: initial,
-    //   borrowedMargin: borrowed,
-    //   profit,
-    //   netWorth,
-    //   winThreshold: winAmount,
-    //   lossThreshold: loseAmount,
-    //   unrealizedShortValue,
-    // });
+      console.log("[Threshold Check]", {
+        simBalance: sim,
+        initialBalance: initial,
+        borrowedMargin: borrowed,
+        profit,
+        netWorth,
+        winThreshold: winAmount,
+        lossThreshold: loseAmount,
+        unrealizedShortValue,
+        unrealizedLongValue,
+      });
 
-    if (profit >= winAmount) {
-      // console.log(
-      //   `✅ Profit reached win threshold: profit=${profit}, winThreshold=${winAmount}`
-      // );
-      updatePause.mutate(true);
-      setWinModal(true);
-    } else if (netWorth <= loseAmount) {
-      // console.log(
-      //   `❌ Net Worth dropped below loss threshold: netWorth=${netWorth}, lossThreshold=${loseAmount}`
-      // );
-      updatePause.mutate(true);
-      setLoseModal(true);
-    }
+      if (profit >= winAmount) {
+        console.log(
+          `✅ Profit reached win threshold: profit=${profit}, winThreshold=${winAmount}`
+        );
+        updatePause.mutate(true);
+        setWinModal(true);
+      } else if (netWorth <= loseAmount) {
+        console.log(
+          `❌ Net Worth dropped below loss threshold: netWorth=${netWorth}, lossThreshold=${loseAmount}`
+        );
+        updatePause.mutate(true);
+        setLoseModal(true);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
   }, [
     sim,
     profit,
