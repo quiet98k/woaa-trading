@@ -25,6 +25,7 @@
     "date-fns": "^4.1.0",
     "lightweight-charts": "^5.0.7",
     "lodash.debounce": "^4.0.8",
+    "luxon": "^3.7.1",
     "radix-ui": "^1.4.1",
     "react": "^19.1.0",
     "react-apexcharts": "^1.7.0",

@@ -9,7 +9,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useHistoricalBars } from "../hooks/useHistoricalData";
 import { useRealTimeData } from "../hooks/useRealTimeData";
-import { useMarketCalendar } from "../hooks/useHistoricalData";
 import {
   fetchMarketCalendar,
   type FetchBarsOptions,
@@ -30,6 +29,69 @@ const TIMEFRAME_MAP: Record<
   "1M/1D": { timeframe: "1Day", rangeMonths: 1 },
   "1Y/1M": { timeframe: "1Month", rangeYears: 1 },
 };
+
+function defaultTickMarkFormatter(
+  timePoint: { timestamp: any; businessDay?: any },
+  tickMarkType: any,
+  locale: Intl.LocalesArgument
+) {
+  const formatOptions: Intl.DateTimeFormatOptions = {};
+
+  switch (tickMarkType) {
+    case 0: //TickMarkType.Year:
+      formatOptions.year = "numeric";
+      break;
+
+    case 1: // TickMarkType.Month:
+      formatOptions.month = "short";
+      break;
+
+    case 2: //TickMarkType.DayOfMonth:
+      formatOptions.day = "numeric";
+      break;
+
+    case 3: //TickMarkType.Time:
+      formatOptions.hour12 = false;
+      formatOptions.hour = "2-digit";
+      formatOptions.minute = "2-digit";
+      break;
+
+    case 4: //TickMarkType.TimeWithSeconds:
+      formatOptions.hour12 = false;
+      formatOptions.hour = "2-digit";
+      formatOptions.minute = "2-digit";
+      formatOptions.second = "2-digit";
+      break;
+
+    default:
+    // ensureNever(tickMarkType);
+  }
+
+  const date =
+    timePoint.businessDay === undefined
+      ? new Date(timePoint.timestamp * 1000)
+      : new Date(
+          Date.UTC(
+            timePoint.businessDay.year,
+            timePoint.businessDay.month - 1,
+            timePoint.businessDay.day
+          )
+        );
+
+  // from given date we should use only as UTC date or timestamp
+  // but to format as locale date we can convert UTC date to local date
+  const localDateFromUtc = new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    date.getUTCMilliseconds()
+  );
+
+  return localDateFromUtc.toLocaleString(locale, formatOptions);
+}
 
 export async function getPreviousMarketDay(date: Date): Promise<string | null> {
   const end = date.toISOString().split("T")[0];
@@ -138,6 +200,8 @@ export default function RealTimeChart() {
     chartRef.current?.remove();
     chartRef.current = null;
 
+    const localTimezoneOffset = new Date().getTimezoneOffset() * 60;
+
     const chart = createChart(containerRef.current, {
       layout: { background: { color: "white" }, textColor: "black" },
       height: 400,
@@ -146,15 +210,35 @@ export default function RealTimeChart() {
         visible: true,
         timeVisible: timeOption === "1D/1Min",
         secondsVisible: false,
+        tickMarkFormatter: (time: number, tickMarkType: any, locale: any) => {
+          return defaultTickMarkFormatter(
+            { timestamp: time - localTimezoneOffset },
+            tickMarkType,
+            locale
+          );
+        },
       },
-
-      localization: {
-        timeFormatter: (timestamp: number) =>
-          new Date(timestamp * 1000).toLocaleTimeString("en-US", {
-            hour: "numeric",
-            minute: "2-digit",
-          }),
-      },
+      // localization: {
+      //   locale: "en-US",
+      //   timeFormatter: (timestamp: number) => {
+      //     const local = timeToLocal(timestamp);
+      //     return new Date(local * 1000).toLocaleString("en-US", {
+      //       timeZone: "America/Los_Angeles", // your target timezone
+      //       hour: "2-digit",
+      //       minute: "2-digit",
+      //       month: "short",
+      //       day: "numeric",
+      //     });
+      //   },
+      // },
+      // localization: {
+      //   timeFormatter: (timestamp: number) =>
+      //     new Date(timestamp * 1000).toLocaleTimeString("en-US", {
+      //       timeZone: "America/Los_Angeles",
+      //       hour: "numeric",
+      //       minute: "2-digit",
+      //     }),
+      // },
     });
 
     chart.applyOptions({
