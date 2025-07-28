@@ -16,6 +16,10 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useHistoricalBars } from "../hooks/useHistoricalData";
 import { useSimTime } from "../hooks/useSimTimeSocket";
 import { ChartContext } from "../pages/Dashboard";
+import {
+  fetchMarketCalendar,
+  type FetchBarsOptions,
+} from "../api/historicalData";
 
 const SYMBOL_OPTIONS: Record<string, string> = {
   Apple: "AAPL",
@@ -45,20 +49,54 @@ const TIMEFRAME_INTERVAL_MAP: Record<
   "1Y/1M": { timeframe: "1Month", rangeYears: 1 },
 };
 
-function getPreviousMarketDay(date: Date): string {
-  const d = new Date(date);
-  do {
-    d.setDate(d.getDate() - 1);
-  } while (d.getDay() === 0 || d.getDay() === 6);
-  return d.toISOString().split("T")[0];
+// function getPreviousMarketDay(date: Date): string {
+//   const d = new Date(date);
+//   do {
+//     d.setDate(d.getDate() - 1);
+//   } while (d.getDay() === 0 || d.getDay() === 6);
+//   return d.toISOString().split("T")[0];
+// }
+
+// function getNextMarketDay(date: Date): string {
+//   const d = new Date(date);
+//   do {
+//     d.setDate(d.getDate() + 1);
+//   } while (d.getDay() === 0 || d.getDay() === 6);
+//   return d.toISOString().split("T")[0];
+// }
+
+export async function getPreviousMarketDay(date: Date): Promise<string | null> {
+  const end = date.toISOString().split("T")[0];
+
+  const lookback = new Date(date);
+  lookback.setDate(lookback.getDate() - 30); // Look back 30 calendar days
+  const start = lookback.toISOString().split("T")[0];
+
+  const calendar = await fetchMarketCalendar(start, end);
+
+  const sortedDates = Array.from(calendar.keys())
+    .sort()
+    .filter((d) => d <= end);
+  if (sortedDates.length === 0) return null;
+
+  return sortedDates.at(-1)!;
 }
 
-function getNextMarketDay(date: Date): string {
-  const d = new Date(date);
-  do {
-    d.setDate(d.getDate() + 1);
-  } while (d.getDay() === 0 || d.getDay() === 6);
-  return d.toISOString().split("T")[0];
+export async function getNextMarketDay(date: Date): Promise<string | null> {
+  const start = date.toISOString().split("T")[0];
+
+  const forward = new Date(date);
+  forward.setDate(forward.getDate() + 30); // Look forward 30 calendar days
+  const end = forward.toISOString().split("T")[0];
+
+  const calendar = await fetchMarketCalendar(start, end);
+
+  const sortedDates = Array.from(calendar.keys())
+    .sort()
+    .filter((d) => d > start);
+  if (sortedDates.length === 0) return null;
+
+  return sortedDates[0];
 }
 
 export default function Chart() {
@@ -74,44 +112,76 @@ export default function Chart() {
 
   const { simTime } = useSimTime();
 
-  const buildAllSymbols1DOptions = () => {
-    if (!simTime) return null;
-    const config = TIMEFRAME_INTERVAL_MAP["1D/1Min"];
-    const end = getNextMarketDay(simTime);
-    const startDate = new Date(simTime);
-    startDate.setDate(startDate.getDate() - (config.rangeDays ?? 1));
-    const start = getPreviousMarketDay(startDate);
-    return {
-      symbols: Object.values(SYMBOL_OPTIONS).join(","),
-      start,
-      end,
-      timeframe: config.timeframe,
+  const [optionsAll1D, setOptionsAll1D] = useState<FetchBarsOptions | null>(
+    null
+  );
+  const [options1M, setOptions1M] = useState<FetchBarsOptions | null>(null);
+  const [options1Y, setOptions1Y] = useState<FetchBarsOptions | null>(null);
+
+  const simDate = simTime ? simTime.toISOString().split("T")[0] : null;
+
+  useEffect(() => {
+    const buildOptions = async () => {
+      if (!simDate) return;
+
+      const allSymbols = Object.values(SYMBOL_OPTIONS).join(",");
+
+      const config1D = TIMEFRAME_INTERVAL_MAP["1D/1Min"];
+      const end1D = await getNextMarketDay(new Date(simDate));
+      const start1DDate = new Date(simDate);
+      start1DDate.setDate(start1DDate.getDate() - (config1D.rangeDays ?? 1));
+      const start1D = await getPreviousMarketDay(start1DDate);
+
+      if (start1D && end1D) {
+        setOptionsAll1D({
+          symbols: allSymbols,
+          start: start1D,
+          end: end1D,
+          timeframe: config1D.timeframe,
+        });
+      }
+
+      if (!selectedSymbol) return;
+
+      const config1M = TIMEFRAME_INTERVAL_MAP["1M/1D"];
+      const end1M = await getNextMarketDay(new Date(simDate));
+      const start1MDate = new Date(simDate);
+      start1MDate.setMonth(
+        start1MDate.getMonth() - (config1M.rangeMonths ?? 1)
+      );
+      const start1M = await getPreviousMarketDay(start1MDate);
+
+      if (start1M && end1M) {
+        setOptions1M({
+          symbols: selectedSymbol,
+          start: start1M,
+          end: end1M,
+          timeframe: config1M.timeframe,
+        });
+      }
+
+      const config1Y = TIMEFRAME_INTERVAL_MAP["1Y/1M"];
+      const end1Y = await getNextMarketDay(new Date(simDate));
+      const start1YDate = new Date(simDate);
+      start1YDate.setFullYear(
+        start1YDate.getFullYear() - (config1Y.rangeYears ?? 1)
+      );
+      const start1Y = await getPreviousMarketDay(start1YDate);
+
+      if (start1Y && end1Y) {
+        setOptions1Y({
+          symbols: selectedSymbol,
+          start: start1Y,
+          end: end1Y,
+          timeframe: config1Y.timeframe,
+        });
+      }
     };
-  };
 
-  const optionsAll1D = useMemo(() => buildAllSymbols1DOptions(), [simTime]);
+    buildOptions();
+  }, [simDate, selectedSymbol]); // ✅ now only triggers once per calendar day or symbol change
+
   const bars1D = useHistoricalBars(optionsAll1D!, !!optionsAll1D);
-
-  const options1M = useMemo(() => {
-    if (!simTime || !selectedSymbol) return null;
-    const config = TIMEFRAME_INTERVAL_MAP["1M/1D"];
-    const end = getNextMarketDay(simTime);
-    const startDate = new Date(simTime);
-    startDate.setMonth(startDate.getMonth() - (config.rangeMonths ?? 1));
-    const start = getPreviousMarketDay(startDate);
-    return { symbols: selectedSymbol, start, end, timeframe: config.timeframe };
-  }, [simTime, selectedSymbol]);
-
-  const options1Y = useMemo(() => {
-    if (!simTime || !selectedSymbol) return null;
-    const config = TIMEFRAME_INTERVAL_MAP["1Y/1M"];
-    const end = getNextMarketDay(simTime);
-    const startDate = new Date(simTime);
-    startDate.setFullYear(startDate.getFullYear() - (config.rangeYears ?? 1));
-    const start = getPreviousMarketDay(startDate);
-    return { symbols: selectedSymbol, start, end, timeframe: config.timeframe };
-  }, [simTime, selectedSymbol]);
-
   const bars1M = useHistoricalBars(options1M!, !!options1M);
   const bars1Y = useHistoricalBars(options1Y!, !!options1Y);
 

@@ -9,6 +9,11 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useHistoricalBars } from "../hooks/useHistoricalData";
 import { useRealTimeData } from "../hooks/useRealTimeData";
+import { useMarketCalendar } from "../hooks/useHistoricalData";
+import {
+  fetchMarketCalendar,
+  type FetchBarsOptions,
+} from "../api/historicalData";
 
 type TimeOption = "1D/1Min" | "1M/1D" | "1Y/1M";
 
@@ -26,6 +31,40 @@ const TIMEFRAME_MAP: Record<
   "1Y/1M": { timeframe: "1Month", rangeYears: 1 },
 };
 
+export async function getPreviousMarketDay(date: Date): Promise<string | null> {
+  const end = date.toISOString().split("T")[0];
+
+  const lookback = new Date(date);
+  lookback.setDate(lookback.getDate() - 30); // Look back 30 calendar days
+  const start = lookback.toISOString().split("T")[0];
+
+  const calendar = await fetchMarketCalendar(start, end);
+
+  const sortedDates = Array.from(calendar.keys())
+    .sort()
+    .filter((d) => d <= end);
+  if (sortedDates.length === 0) return null;
+
+  return sortedDates.at(-1)!;
+}
+
+// export async function getNextMarketDay(date: Date): Promise<string | null> {
+//   const start = date.toISOString().split("T")[0];
+
+//   const forward = new Date(date);
+//   forward.setDate(forward.getDate() + 30); // Look forward 30 calendar days
+//   const end = forward.toISOString().split("T")[0];
+
+//   const calendar = await fetchMarketCalendar(start, end);
+
+//   const sortedDates = Array.from(calendar.keys())
+//     .sort()
+//     .filter((d) => d > start);
+//   if (sortedDates.length === 0) return null;
+
+//   return sortedDates[0];
+// }
+
 export default function RealTimeChart() {
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -39,21 +78,38 @@ export default function RealTimeChart() {
 
   const { timeframe, rangeDays, rangeMonths, rangeYears } =
     TIMEFRAME_MAP[timeOption];
-  const end = new Date();
-  const start = new Date(end);
-  if (rangeDays) start.setDate(start.getDate() - rangeDays);
-  if (rangeMonths) start.setMonth(start.getMonth() - rangeMonths);
-  if (rangeYears) start.setFullYear(start.getFullYear() - rangeYears);
-
-  const bars = useHistoricalBars(
-    {
-      symbols: symbol,
-      start: start.toISOString().split("T")[0],
-      end: end.toISOString().split("T")[0],
-      timeframe,
-    },
-    !!symbol
+  const [fetchOptions, setFetchOptions] = useState<FetchBarsOptions | null>(
+    null
   );
+  useEffect(() => {
+    const buildOptions = async () => {
+      if (!symbol) return;
+
+      const today = new Date();
+      const end = await getPreviousMarketDay(today); // if today is not a trading day
+
+      const startDate = new Date(today);
+      if (rangeDays) startDate.setDate(startDate.getDate() - rangeDays);
+      if (rangeMonths) startDate.setMonth(startDate.getMonth() - rangeMonths);
+      if (rangeYears)
+        startDate.setFullYear(startDate.getFullYear() - rangeYears);
+
+      const start = await getPreviousMarketDay(startDate);
+
+      if (start && end) {
+        setFetchOptions({
+          symbols: symbol,
+          start,
+          end,
+          timeframe,
+        });
+      }
+    };
+
+    buildOptions();
+  }, [symbol, timeframe, rangeDays, rangeMonths, rangeYears]);
+
+  const bars = useHistoricalBars(fetchOptions!, !!fetchOptions);
 
   const { connected, subscribe, unsubscribe } = useRealTimeData((msg) => {
     if (msg.T === "b" && msg.S === symbol) {

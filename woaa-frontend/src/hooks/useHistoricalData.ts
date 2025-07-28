@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   fetchHistoricalBars,
   type FetchBarsOptions,
+  fetchMarketCalendar,
 } from "../api/historicalData";
 
 /**
@@ -24,5 +25,25 @@ export function useHistoricalBars(
     queryFn: () => fetchHistoricalBars(options),
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+/**
+ * React Query hook to fetch market calendar between a date range.
+ *
+ * @param start - ISO string (YYYY-MM-DD)
+ * @param end - ISO string (YYYY-MM-DD)
+ * @param enabled - Optional flag to control query execution
+ */
+export function useMarketCalendar(
+  start: string,
+  end: string,
+  enabled: boolean = true
+) {
+  return useQuery({
+    queryKey: ["marketCalendar", start, end],
+    queryFn: () => fetchMarketCalendar(start, end),
+    enabled,
+    staleTime: 1000 * 60 * 60, // 1 hour
   });
 }

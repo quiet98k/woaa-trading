@@ -12,7 +12,7 @@ ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
 # print(f"{ALPACA_API_KEY = }")
 # print(f"{ALPACA_SECRET_KEY = }")
 BAR_URL = "https://data.alpaca.markets/v2/stocks/bars"
-CALENDAR_URL = "https://data.alpaca.markets/v2/calendar"
+CALENDAR_URL = "https://api.alpaca.markets/v2/calendar"
 
 
 async def fetch_bars_from_alpaca(
