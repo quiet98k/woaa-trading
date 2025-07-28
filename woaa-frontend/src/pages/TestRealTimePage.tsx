@@ -6,6 +6,8 @@ const TestRealTimePage: React.FC = () => {
   const [symbol, setSymbol] = useState("AAPL");
   const [trackingSymbol, setTrackingSymbol] = useState<string | null>(null);
   const [subscriptions, setSubscriptions] = useState<string[]>([]);
+  const [subscribeTrades, setSubscribeTrades] = useState(true);
+  const [subscribeBars, setSubscribeBars] = useState(true);
 
   const { connected, subscribe, unsubscribe, getSubscriptions } =
     useRealTimeData((data) => {
@@ -21,17 +23,19 @@ const TestRealTimePage: React.FC = () => {
   const handleSubscribe = () => {
     const trimmed = symbol.trim().toUpperCase();
     if (trimmed && connected) {
-      subscribe(trimmed, "trades");
+      if (subscribeTrades) subscribe(trimmed, "trades");
+      if (subscribeBars) subscribe(trimmed, "bars");
       setTrackingSymbol(trimmed);
       setMessages([]);
-      setTimeout(() => getSubscriptions(), 200); // Delay to allow server to register
+      setTimeout(() => getSubscriptions(), 200);
     }
   };
 
   const handleUnsubscribe = () => {
     const trimmed = symbol.trim().toUpperCase();
     if (trimmed && connected) {
-      unsubscribe(trimmed, "trades");
+      if (subscribeTrades) unsubscribe(trimmed, "trades");
+      if (subscribeBars) unsubscribe(trimmed, "bars");
       if (trackingSymbol === trimmed) setTrackingSymbol(null);
       setTimeout(() => getSubscriptions(), 200);
     }
@@ -49,7 +53,7 @@ const TestRealTimePage: React.FC = () => {
         Status: {connected ? "🟢 Connected" : "🔴 Disconnected"}
       </p>
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-2">
         <input
           type="text"
           value={symbol}
@@ -57,6 +61,25 @@ const TestRealTimePage: React.FC = () => {
           placeholder="Enter symbol (e.g. AAPL)"
           className="border border-gray-300 px-2 py-1 rounded-md text-sm"
         />
+        <label className="text-sm flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={subscribeTrades}
+            onChange={(e) => setSubscribeTrades(e.target.checked)}
+          />
+          Trades
+        </label>
+        <label className="text-sm flex items-center gap-1">
+          <input
+            type="checkbox"
+            checked={subscribeBars}
+            onChange={(e) => setSubscribeBars(e.target.checked)}
+          />
+          Bars
+        </label>
+      </div>
+
+      <div className="flex items-center gap-2 mb-4">
         <button
           onClick={handleSubscribe}
           disabled={!connected}

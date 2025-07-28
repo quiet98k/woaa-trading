@@ -174,14 +174,18 @@ export default function RealTimeChart() {
   const bars = useHistoricalBars(fetchOptions!, !!fetchOptions);
 
   const { connected, subscribe, unsubscribe } = useRealTimeData((msg) => {
-    if (msg.T === "b" && msg.S === symbol) {
+    const payload = Array.isArray(msg) ? msg[0] : msg;
+    if (!payload) return;
+
+    if (payload.T === "b" && payload.S === symbol) {
       const bar: CandlestickData = {
-        time: Math.floor(new Date(msg.t).getTime() / 1000) as UTCTimestamp,
-        open: msg.o,
-        high: msg.h,
-        low: msg.l,
-        close: msg.c,
+        time: Math.floor(new Date(payload.t).getTime() / 1000) as UTCTimestamp,
+        open: payload.o,
+        high: payload.h,
+        low: payload.l,
+        close: payload.c,
       };
+      console.log("Received real-time bar:", bar);
       setRealTimeBar(bar);
     }
   });
@@ -351,10 +355,18 @@ export default function RealTimeChart() {
         />
         <button
           onClick={handleTrack}
-          className="bg-blue-600 text-white px-3 py-1 rounded"
+          disabled={inputSymbol.trim().toUpperCase() === symbol}
+          className={`px-3 py-1 rounded text-white ${
+            inputSymbol.trim().toUpperCase() === symbol
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
-          Track
+          {inputSymbol.trim().toUpperCase() === symbol
+            ? "Tracking..."
+            : "Track"}
         </button>
+
         {(["1D/1Min", "1M/1D", "1Y/1M"] as TimeOption[]).map((opt) => (
           <button
             key={opt}
