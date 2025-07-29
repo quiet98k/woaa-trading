@@ -8,6 +8,7 @@ router = APIRouter(prefix="/log", tags=["Logs"])
 class LogEntry(BaseModel):
     timestamp: str
     log_id: str
+    session_id: str
     device: str
     user_name: str
     level: str

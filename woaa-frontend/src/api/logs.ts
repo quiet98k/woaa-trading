@@ -6,6 +6,7 @@ import { useMe } from "../hooks/useUser";
 export interface FrontendLog {
   timestamp: string;
   log_id: string;
+  session_id: string;
   device: string;
   user_name: string;
   level: "INFO" | "DEBUG" | "ERROR" | "WARN";
@@ -36,14 +37,26 @@ function getFileName(importMetaUrl: string): string {
   return importMetaUrl.split("/").pop()?.split("?")[0] ?? "unknown";
 }
 
+// Generate a session ID for this browser tab/session
+function getSessionId(): string {
+  const key = "frontend_session_id";
+  let sessionId = sessionStorage.getItem(key);
+  if (!sessionId) {
+    sessionId = uuidv4();
+    sessionStorage.setItem(key, sessionId);
+  }
+  return sessionId;
+}
+
 // Send log to backend
 export async function logFrontendEvent(
-  log: Omit<FrontendLog, "timestamp" | "log_id" | "device">
+  log: Omit<FrontendLog, "timestamp" | "log_id" | "device" | "session_id">
 ) {
   const payload: FrontendLog = {
     ...log,
     timestamp: new Date().toISOString(),
     log_id: uuidv4(),
+    session_id: getSessionId(),
     device: getDeviceInfo(),
   };
 
@@ -67,7 +80,12 @@ export function useLogger(importMetaUrl: string) {
   return (
     log: Omit<
       FrontendLog,
-      "timestamp" | "log_id" | "device" | "location" | "user_name"
+      | "timestamp"
+      | "log_id"
+      | "device"
+      | "location"
+      | "user_name"
+      | "session_id"
     >
   ) => {
     return logFrontendEvent({
