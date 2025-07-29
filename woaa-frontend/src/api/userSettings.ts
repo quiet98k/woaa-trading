@@ -1,14 +1,14 @@
 const BASE_URL = import.meta.env.VITE_API_URL;
-const token = localStorage.getItem("token");
-const headers = {
-  "Content-Type": "application/json",
-  Authorization: `Bearer ${token}`,
-};
 
 /**
  * Fetch current user's settings.
  */
 export async function getUserSettings(): Promise<any> {
+  const token = localStorage.getItem("token");
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
   const res = await fetch(`${BASE_URL}/user-settings/me`, {
     headers,
   });
@@ -20,6 +20,11 @@ export async function getUserSettings(): Promise<any> {
  * Update simulation speed (current user).
  */
 export async function updateUserSpeed(data: { speed: number }): Promise<any> {
+  const token = localStorage.getItem("token");
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
   const res = await fetch(`${BASE_URL}/user-settings/me/speed`, {
     method: "PATCH",
     headers,
@@ -33,6 +38,11 @@ export async function updateUserSpeed(data: { speed: number }): Promise<any> {
  * Toggle simulation pause state (current user).
  */
 export async function updateUserPause(data: { paused: boolean }): Promise<any> {
+  const token = localStorage.getItem("token");
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
   const res = await fetch(`${BASE_URL}/user-settings/me/pause`, {
     method: "PATCH",
     headers,
@@ -48,6 +58,11 @@ export async function updateUserPause(data: { paused: boolean }): Promise<any> {
 export async function updateUserStartTime(data: {
   start_time: string;
 }): Promise<any> {
+  const token = localStorage.getItem("token");
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
   const res = await fetch(`${BASE_URL}/user-settings/me/start-time`, {
     method: "PATCH",
     headers,
@@ -61,6 +76,11 @@ export async function updateUserStartTime(data: {
  * Admin-only: Get settings for a specific user by ID.
  */
 export async function getUserSettingsById(userId: string): Promise<any> {
+  const token = localStorage.getItem("token");
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
   const res = await fetch(`${BASE_URL}/user-settings/${userId}`, {
     headers,
   });
@@ -75,6 +95,11 @@ export async function updateUserSettings(
   userId: string,
   updates: any
 ): Promise<any> {
+  const token = localStorage.getItem("token");
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
   console.log("updates", updates);
   const res = await fetch(`${BASE_URL}/user-settings/${userId}`, {
     method: "PUT",
