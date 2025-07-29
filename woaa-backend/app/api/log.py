@@ -16,6 +16,7 @@ class LogEntry(BaseModel):
     error_msg: str | None
     location: str
     additional_info: dict
+    notes: str | None = None
 
 @router.post("")
 async def receive_log(entry: LogEntry):

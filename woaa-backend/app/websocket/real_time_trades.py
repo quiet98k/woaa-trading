@@ -13,7 +13,7 @@ load_dotenv()
 
 # Configure logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)  # Only affects this logger
+logger.setLevel(logging.DEBUG)  # Only affects this logger
     
     
 ALPACA_URL = "wss://stream.data.alpaca.markets/v2/iex"

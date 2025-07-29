@@ -1,4 +1,7 @@
+// src/utils/logger.ts
 import { v4 as uuidv4 } from "uuid";
+import { UAParser } from "ua-parser-js";
+import { useMe } from "../hooks/useUser";
 
 export interface FrontendLog {
   timestamp: string;
@@ -9,25 +12,31 @@ export interface FrontendLog {
   event_type: string;
   status: string; // "success" | "fail" | "200" | "400" etc.
   error_msg: string | null;
-  location: string;
+  location: string; // File/component name
   additional_info: Record<string, any>;
+  notes?: string | null;
 }
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
-// Helper to get device info
+// Get device info
 function getDeviceInfo(): string {
-  // More modern approach if available
-  const uaData = (navigator as any).userAgentData;
-  if (uaData) {
-    return `${uaData.platform} / ${uaData.brands
-      ?.map((b: any) => b.brand)
-      .join(", ")}`;
-  }
-  return navigator.userAgent;
+  const parser = new UAParser(); // instantiate with 'new'
+  const { os, browser, device } = parser.getResult();
+
+  return (
+    `${os.name ?? "Unknown OS"} ${os.version ?? ""} / ` +
+    `${browser.name ?? "Unknown Browser"} ${browser.version ?? ""}` +
+    (device.type ? ` (${device.type})` : "")
+  );
 }
 
-// Main log function
+// Extract file name from import.meta.url
+function getFileName(importMetaUrl: string): string {
+  return importMetaUrl.split("/").pop()?.split("?")[0] ?? "unknown";
+}
+
+// Send log to backend
 export async function logFrontendEvent(
   log: Omit<FrontendLog, "timestamp" | "log_id" | "device">
 ) {
@@ -47,4 +56,24 @@ export async function logFrontendEvent(
   } catch (err) {
     console.error("Failed to log event:", err);
   }
+}
+
+// Hook-based logger factory
+export function useLogger(importMetaUrl: string) {
+  const me = useMe();
+  const userName = me.data?.username || "guest";
+  const fileName = getFileName(importMetaUrl);
+
+  return (
+    log: Omit<
+      FrontendLog,
+      "timestamp" | "log_id" | "device" | "location" | "user_name"
+    >
+  ) => {
+    return logFrontendEvent({
+      ...log,
+      location: fileName,
+      user_name: userName,
+    });
+  };
 }

@@ -15,7 +15,7 @@ import {
 import { useMe } from "../hooks/useUser";
 import { logout } from "../api/auth";
 import { useNavigate } from "react-router-dom";
-import { PositionTable } from "../components/positionTable";
+import { PositionTable } from "../components/PositionTable";
 import SharesInput from "../components/SharesInput";
 import SimulationControls from "../components/SimulationControls";
 import { AdminSettingsPanel } from "../components/AdminControls";

@@ -12,6 +12,7 @@ import { ChartContext } from "../pages/Dashboard";
 import { useUpdatePause } from "../hooks/useUserSettings";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
+import { useLogger } from "../api/logs";
 
 /**
  * @fileoverview Fully self-contained user portfolio panel including user info, balances, and calculated profit with win/loss modal triggers.
@@ -19,7 +20,7 @@ import { useMarketClock } from "../hooks/useMarketClock";
 
 export function UserPortfolio(): JSX.Element {
   const [latestPrices, setLatestPrices] = useState<Record<string, number>>({});
-
+  const log = useLogger(import.meta.url);
   const navigate = useNavigate();
   const { data: user } = useMe();
   const { data: settings } = useUserSettings();
@@ -257,7 +258,17 @@ export function UserPortfolio(): JSX.Element {
 
       if (!user || !settings || !positions) return;
 
-      console.log("[Reset Data] Start (triggered by mode switch)");
+      log({
+        level: "INFO",
+        event_type: "logic.reset_data_start",
+        status: "success",
+        error_msg: null,
+        additional_info: {
+          trigger: "mode switch",
+          new_mode: mode,
+        },
+        notes: "Start resetting data when mode switched",
+      });
 
       const initialSim = settings.initial_sim_balance ?? 10000;
 
@@ -304,6 +315,23 @@ export function UserPortfolio(): JSX.Element {
       updatePause.mutate(true);
     }
   }, [mode]);
+
+  function handleToggleMode() {
+    const newMode = mode === "historical" ? "realtime" : "historical";
+
+    // Update state
+    setMode(newMode);
+
+    // Log event
+    log({
+      level: "INFO",
+      event_type: "ui.toggle_mode",
+      status: "success",
+      error_msg: null,
+      additional_info: { from: mode, to: newMode },
+      notes: "User toggled between historical and real-time mode",
+    });
+  }
 
   return (
     <>
@@ -377,9 +405,7 @@ export function UserPortfolio(): JSX.Element {
             <div className="flex items-center gap-3">
               {/* Toggle Button */}
               <button
-                onClick={() =>
-                  setMode(mode === "historical" ? "realtime" : "historical")
-                }
+                onClick={handleToggleMode}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
                   mode === "realtime"
                     ? "bg-blue-600 text-white hover:bg-blue-700"
