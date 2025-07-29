@@ -122,12 +122,16 @@ export default function SimulationControls(): JSX.Element {
     updateBalances.mutate(
       { sim_balance: initialSim, real_balance: 0 },
       {
-      onSuccess: () => {
-        console.log("[Reset Data] sim_balance reset to", initialSim, "and real_balance reset to 0");
-      },
-      onError: (err) => {
-        console.error("[Reset Data] Failed to reset balances", err);
-      },
+        onSuccess: () => {
+          console.log(
+            "[Reset Data] sim_balance reset to",
+            initialSim,
+            "and real_balance reset to 0"
+          );
+        },
+        onError: (err) => {
+          console.error("[Reset Data] Failed to reset balances", err);
+        },
       }
     );
 
@@ -158,8 +162,6 @@ export default function SimulationControls(): JSX.Element {
       }
     });
   };
-
-  const isStartDateChanged = localStartDate !== initialStartDate;
 
   if (isLoading) {
     return <div className="text-gray-500">Loading simulation controls...</div>;
@@ -233,11 +235,8 @@ export default function SimulationControls(): JSX.Element {
         </button>
 
         <button
-          className={`bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs focus:outline-none active:outline-none ${
-            isStartDateChanged ? "" : "opacity-50 cursor-not-allowed"
-          }`}
+          className={`bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-xs focus:outline-none`}
           onClick={handleRestart}
-          disabled={!isStartDateChanged}
         >
           Restart
         </button>
