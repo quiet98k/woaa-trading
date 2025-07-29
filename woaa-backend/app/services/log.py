@@ -1,41 +1,24 @@
-"""
-Service functions for managing logs.
-Handles creation and retrieval of user logs.
-"""
+# app/services/log.py
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
-from uuid import UUID
-from app.models.log import Log
-from app.schemas.log import LogCreate
-from typing import List
+import os
+import json
+from datetime import datetime
+from pathlib import Path
+from fastapi.concurrency import run_in_threadpool
 
+LOG_DIR = Path(os.getenv("LOG_DIR", "./logs")).resolve()
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-async def create_log(db: AsyncSession, log_data: LogCreate) -> Log:
-    """
-    Create a new log entry.
-    """
-    log = Log(**log_data.model_dump())
-    db.add(log)
-    await db.commit()
-    await db.refresh(log)
-    return log
+async def save_log(entry: dict):
+    """Save log entry as a JSON line in today's log file."""
+    log_file = LOG_DIR / f"{datetime.now().strftime('%Y-%m-%d')}.log"
 
+    # Ensure each log is on a single line for easy ingestion by Loki later
+    line = json.dumps(entry, ensure_ascii=False)
 
-async def get_logs_by_user(db: AsyncSession, user_id: UUID) -> List[Log]:
-    """
-    Retrieve all logs for a specific user, sorted by timestamp descending.
-    """
-    result = await db.execute(
-        select(Log).where(Log.user_id == user_id).order_by(Log.timestamp.desc())
-    )
-    return result.scalars().all()
+    # Use thread pool to avoid blocking FastAPI event loop
+    await run_in_threadpool(_write_log_line, log_file, line)
 
-
-async def log_action(db: AsyncSession, user_id: UUID, action: str, details: str) -> None:
-    """
-    Utility to quickly log a user action.
-    """
-    log = Log(user_id=user_id, action=action, details=details)
-    db.add(log)
-    await db.commit()
+def _write_log_line(file_path: Path, line: str):
+    with open(file_path, "a", encoding="utf-8") as f:
+        f.write(line + "\n")

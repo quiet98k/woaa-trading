@@ -1,34 +1,50 @@
-/**
- * @fileoverview Handles API requests related to user logs.
- */
+import { v4 as uuidv4 } from "uuid";
+
+export interface FrontendLog {
+  timestamp: string;
+  log_id: string;
+  device: string;
+  user_name: string;
+  level: "INFO" | "DEBUG" | "ERROR" | "WARN";
+  event_type: string;
+  status: string; // "success" | "fail" | "200" | "400" etc.
+  error_msg: string | null;
+  location: string;
+  additional_info: Record<string, any>;
+}
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
-/**
- * Fetch logs for the currently authenticated user.
- *
- * @returns Promise resolving to an array of log entries.
- */
-export async function getMyLogs(): Promise<any[]> {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${BASE_URL}/logs/me`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("Failed to fetch logs");
-  return res.json();
+// Helper to get device info
+function getDeviceInfo(): string {
+  // More modern approach if available
+  const uaData = (navigator as any).userAgentData;
+  if (uaData) {
+    return `${uaData.platform} / ${uaData.brands
+      ?.map((b: any) => b.brand)
+      .join(", ")}`;
+  }
+  return navigator.userAgent;
 }
 
-/**
- * Fetch logs for a specific user (admin only).
- *
- * @param userId - UUID of the user whose logs are being requested.
- * @returns Promise resolving to an array of log entries.
- */
-export async function getLogsByUserId(userId: string): Promise<any[]> {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${BASE_URL}/logs/${userId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) throw new Error("Admin failed to fetch logs");
-  return res.json();
+// Main log function
+export async function logFrontendEvent(
+  log: Omit<FrontendLog, "timestamp" | "log_id" | "device">
+) {
+  const payload: FrontendLog = {
+    ...log,
+    timestamp: new Date().toISOString(),
+    log_id: uuidv4(),
+    device: getDeviceInfo(),
+  };
+
+  try {
+    await fetch(`${BASE_URL}/log`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.error("Failed to log event:", err);
+  }
 }
