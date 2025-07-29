@@ -13,7 +13,6 @@ from app.auth import get_current_user
 from app.models.user import User
 from app.schemas import position as schemas
 from app.services import position as service
-from app.services.log import log_action
 
 router = APIRouter(prefix="/positions", tags=["position"])
 
@@ -25,7 +24,6 @@ async def create_position(
     current_user: User = Depends(get_current_user)
 ):
     created = await service.create_position(db, current_user.id, position)
-    await log_action(db, current_user.id, "create_position", f"Created position {created.id} ({created.symbol})")
     return created
 
 
@@ -35,7 +33,6 @@ async def get_my_positions(
     current_user: User = Depends(get_current_user)
 ):
     positions = await service.get_positions_by_user(db, current_user.id)
-    await log_action(db, current_user.id, "list_positions", f"Retrieved {len(positions)} positions")
     return positions
 
 
@@ -49,7 +46,6 @@ async def get_position(
     if not position or position.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Position not found or unauthorized")
 
-    await log_action(db, current_user.id, "view_position", f"Viewed position {position_id}")
     return position
 
 
@@ -65,7 +61,6 @@ async def update_position(
         raise HTTPException(status_code=404, detail="Position not found or unauthorized")
 
     updated = await service.update_position(db, position_id, updates)
-    await log_action(db, current_user.id, "update_position", f"Updated position {position_id}")
     return updated
 
 
@@ -80,4 +75,3 @@ async def delete_position(
         raise HTTPException(status_code=404, detail="Position not found or unauthorized")
 
     await service.delete_position(db, position_id)
-    await log_action(db, current_user.id, "delete_position", f"Deleted position {position_id}")

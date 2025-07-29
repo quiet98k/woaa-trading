@@ -16,7 +16,6 @@ from app.database import get_db
 from app.auth import get_current_user, get_current_admin_user
 from app.schemas.user import UserOut
 from app.models.user import User
-from app.services.log import log_action
 
 router = APIRouter(prefix="/user", tags=["user"])
 
@@ -26,7 +25,6 @@ async def read_users_me(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await log_action(db, current_user.id, "view_profile", "User fetched their profile via /me")
     return current_user
 
 
@@ -47,7 +45,6 @@ async def get_user_by_id(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    await log_action(db, admin_user.id, "admin_get_user", f"Fetched user {user_id}")
     return user
 
 
@@ -79,11 +76,5 @@ async def update_user_balances(
     await db.commit()
     await db.refresh(user)
 
-    await log_action(
-        db,
-        admin_user.id,
-        "admin_update_balance",
-        f"Updated user {user_id}: {'; '.join(changes)}"
-    )
 
     return user
