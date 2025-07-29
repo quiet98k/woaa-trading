@@ -205,45 +205,46 @@ export function PositionTable(): JSX.Element {
         },
         {
           onSuccess: () => {
-            updatePosition.mutate(
-              {
-                positionId: p.id,
-                updates: {
-                  close_price: currentPrice,
-                  close_shares: shares,
-                  close_time: new Date().toISOString(),
-                  realized_pl: realized,
-                  status: "closed",
-                },
-              },
-              {
-                onSuccess: () => {
-                  const updatedBalances: {
-                    sim_balance?: number;
-                    real_balance?: number;
-                  } = {};
+            const updatedBalances: {
+              sim_balance?: number;
+              real_balance?: number;
+            } = {};
 
-                  if (settings.commission_type === "real") {
-                    updatedBalances.real_balance = parseFloat(
-                      ((freshUser.real_balance ?? 0) - commission).toFixed(2)
-                    );
-                    updatedBalances.sim_balance = parseFloat(
-                      ((freshUser.sim_balance ?? 0) + grossProceeds).toFixed(2)
-                    );
-                  } else {
-                    updatedBalances.sim_balance = parseFloat(
-                      ((freshUser.sim_balance ?? 0) + netProceeds).toFixed(2)
-                    );
-                  }
+            if (settings.commission_type === "real") {
+              updatedBalances.real_balance = parseFloat(
+                ((freshUser.real_balance ?? 0) - commission).toFixed(2)
+              );
+              updatedBalances.sim_balance = parseFloat(
+                ((freshUser.sim_balance ?? 0) + grossProceeds).toFixed(2)
+              );
+            } else {
+              updatedBalances.sim_balance = parseFloat(
+                ((freshUser.sim_balance ?? 0) + netProceeds).toFixed(2)
+              );
+            }
 
-                  updateBalances.mutate(updatedBalances, {
+            // First update balances, then position
+            updateBalances.mutate(updatedBalances, {
+              onSuccess: () => {
+                updatePosition.mutate(
+                  {
+                    positionId: p.id,
+                    updates: {
+                      close_price: currentPrice,
+                      close_shares: shares,
+                      close_time: new Date().toISOString(),
+                      realized_pl: realized,
+                      status: "closed",
+                    },
+                  },
+                  {
                     onSuccess: () => {
                       if (next) next();
                     },
-                  });
-                },
-              }
-            );
+                  }
+                );
+              },
+            });
           },
         }
       );
