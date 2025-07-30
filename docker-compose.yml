@@ -18,6 +18,8 @@ services:
       - "8000:80"
     depends_on:
       - db
+    volumes:
+      - ./logs:/app/logs
     env_file:
       - ./woaa-backend/.env
     environment:
