@@ -24,7 +24,7 @@ export function PositionTable(): JSX.Element {
   const deleteMutation = useDeletePosition();
   const { openPrices, mode } = useContext(ChartContext);
   const { clock } = useMarketClock();
-  const logger = createLogger("UserPortfolio.tsx", user.email);
+  const logger = createLogger("PositionTable.tsx", user.email);
 
   const [latestPrices, setLatestPrices] = useState<Record<string, number>>({});
   const { subscribe } = useRealTimeData((data) => {
