@@ -9,6 +9,7 @@ import { useCreateTransaction } from "../hooks/useTransactions";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { ChartContext } from "../pages/Dashboard";
+import { useTradeProcessing } from "../stores/useTradeProcessing";
 
 /**
  * Component for entering the number of shares to buy/short for the selected stock.
@@ -75,6 +76,10 @@ export default function SharesInput(): JSX.Element {
       return;
     }
 
+    const { setProcessing } = useTradeProcessing.getState();
+
+    setProcessing(true); // 🔒 Start lock
+
     createTransaction.mutate(
       {
         symbol,
@@ -87,18 +92,32 @@ export default function SharesInput(): JSX.Element {
       },
       {
         onSuccess: () => {
-          createPosition.mutate({
-            symbol,
-            position_type: type,
-            open_price: openPrice,
-            open_shares: shares,
-          });
-
-          updateBalances.mutate({
-            sim_balance: newSimBalance,
-            real_balance: newRealBalance,
-          });
+          // 1️⃣ Create position first
+          createPosition.mutate(
+            {
+              symbol,
+              position_type: type,
+              open_price: openPrice,
+              open_shares: shares,
+            },
+            {
+              onSuccess: () => {
+                // 2️⃣ Update balances after position
+                updateBalances.mutate(
+                  {
+                    sim_balance: newSimBalance,
+                    real_balance: newRealBalance,
+                  },
+                  {
+                    onSettled: () => setProcessing(false), // ✅ Always release lock
+                  }
+                );
+              },
+              onError: () => setProcessing(false),
+            }
+          );
         },
+        onError: () => setProcessing(false),
       }
     );
   };

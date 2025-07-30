@@ -11,6 +11,7 @@ import { useUserSettings } from "../hooks/useUserSettings";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
 import { createLogger } from "../api/logs";
+import { useTradeProcessing } from "../stores/useTradeProcessing";
 
 /**
  * Table component to display a list of user positions with live open prices.
@@ -247,6 +248,10 @@ export function PositionTable(): JSX.Element {
         realBefore: freshUser.real_balance,
       });
 
+      const { setProcessing } = useTradeProcessing.getState();
+
+      setProcessing(true);
+
       createTransaction.mutate(
         {
           symbol: p.symbol,
@@ -277,9 +282,10 @@ export function PositionTable(): JSX.Element {
               );
             }
 
-            // First update balances, then position
+            // 1️⃣ Update balances first
             updateBalances.mutate(updatedBalances, {
               onSuccess: () => {
+                // 2️⃣ Then update position
                 updatePosition.mutate(
                   {
                     positionId: p.id,
@@ -295,11 +301,14 @@ export function PositionTable(): JSX.Element {
                     onSuccess: () => {
                       if (next) next();
                     },
+                    onSettled: () => setProcessing(false), // ✅ Release lock after everything
                   }
                 );
               },
+              onError: () => setProcessing(false),
             });
           },
+          onError: () => setProcessing(false),
         }
       );
     });

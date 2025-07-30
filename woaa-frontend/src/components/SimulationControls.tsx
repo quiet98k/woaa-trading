@@ -110,6 +110,9 @@ export default function SimulationControls(): JSX.Element {
   const handleRestart = () => {
     updateStartTime.mutate(localStartDate);
     setInitialStartDate(localStartDate); // Update reference after successful change
+    handleResetData();
+    updatePause.mutate(false);
+    setIsPaused(false);
   };
 
   const handleResetData = (): void => {

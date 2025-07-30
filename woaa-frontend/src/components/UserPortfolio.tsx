@@ -13,12 +13,14 @@ import { useUpdatePause } from "../hooks/useUserSettings";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
 import { createLogger } from "../api/logs";
+import { useTradeProcessing } from "../stores/useTradeProcessing";
 
 /**
  * @fileoverview Fully self-contained user portfolio panel including user info, balances, and calculated profit with win/loss modal triggers.
  */
 
 export function UserPortfolio(): JSX.Element {
+  const processing = useTradeProcessing((s) => s.processing);
   const [latestPrices, setLatestPrices] = useState<Record<string, number>>({});
   const navigate = useNavigate();
   const { data: user } = useMe();
@@ -147,6 +149,11 @@ export function UserPortfolio(): JSX.Element {
 
   // Show modal if thresholds reached
   useEffect(() => {
+    if (processing) {
+      console.log("[Threshold Check Skipped] Trade is processing.");
+      return; // ⛔ Skip while atomic updates are running
+    }
+
     const timeout = setTimeout(() => {
       const changedDeps: string[] = [];
       if (prevDeps.current) {

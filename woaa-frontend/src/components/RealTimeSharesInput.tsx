@@ -5,6 +5,7 @@ import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
+import { useTradeProcessing } from "../stores/useTradeProcessing";
 
 export default function RealTimeSharesInput(): JSX.Element {
   const createTransaction = useCreateTransaction();
@@ -86,6 +87,10 @@ export default function RealTimeSharesInput(): JSX.Element {
       return;
     }
 
+    const { setProcessing } = useTradeProcessing.getState();
+
+    setProcessing(true); // 🔒 Start lock
+
     createTransaction.mutate(
       {
         symbol: trackedSymbol,
@@ -98,18 +103,32 @@ export default function RealTimeSharesInput(): JSX.Element {
       },
       {
         onSuccess: () => {
-          createPosition.mutate({
-            symbol: trackedSymbol,
-            position_type: type,
-            open_price: tradePrice,
-            open_shares: shares,
-          });
-
-          updateBalances.mutate({
-            sim_balance: newSimBalance,
-            real_balance: newRealBalance,
-          });
+          // 1️⃣ Create position
+          createPosition.mutate(
+            {
+              symbol: trackedSymbol,
+              position_type: type,
+              open_price: tradePrice,
+              open_shares: shares,
+            },
+            {
+              onSuccess: () => {
+                // 2️⃣ Update balances after position
+                updateBalances.mutate(
+                  {
+                    sim_balance: newSimBalance,
+                    real_balance: newRealBalance,
+                  },
+                  {
+                    onSettled: () => setProcessing(false), // ✅ Release lock after all done
+                  }
+                );
+              },
+              onError: () => setProcessing(false),
+            }
+          );
         },
+        onError: () => setProcessing(false),
       }
     );
   };
