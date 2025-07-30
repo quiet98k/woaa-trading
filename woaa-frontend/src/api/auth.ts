@@ -17,7 +17,7 @@ const LOCATION = "api/auth.ts";
  */
 export async function login(email: string, password: string): Promise<any> {
   const url = `${BASE_URL}/auth/login`;
-  const eventType = "api.auth/login";
+  const eventType = "api.auth.login";
 
   const res = await fetch(url, {
     method: "POST",
@@ -115,7 +115,7 @@ export async function register(
   await logFrontendEvent({
     username: email || "unknown",
     level: res.ok ? "INFO" : "WARN",
-    event_type: "api.auth/register",
+    event_type: "api.auth.register",
     status: res.status.toString(),
     error_msg: errorMsg,
     location: LOCATION,
@@ -166,7 +166,7 @@ export async function registerAdmin(
   await logFrontendEvent({
     username: email || "unknown",
     level: res.ok ? "INFO" : "WARN",
-    event_type: "api.auth/register-admin",
+    event_type: "api.auth.register-admin",
     status: res.status.toString(),
     error_msg: errorMsg,
     location: LOCATION,

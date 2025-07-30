@@ -1,14 +1,48 @@
 /**
  * @fileoverview Handles API requests related to user trading positions.
  */
-
 const BASE_URL = import.meta.env.VITE_API_URL;
+import { logFrontendEvent } from "./logs";
+
+const LOCATION = "api/positions.ts";
+
+/**
+ * Helper to log position API events
+ */
+async function logPositionEvent(
+  eventType: string,
+  res: Response,
+  notes: string,
+  additional_info: Record<string, any> = {}
+) {
+  const username = localStorage.getItem("username") || "unknown";
+
+  let errorMsg: string | null = null;
+  if (!res.ok) {
+    try {
+      const errData = await res.clone().json();
+      errorMsg = errData.message || res.statusText;
+    } catch {
+      errorMsg = res.statusText;
+    }
+  }
+
+  await logFrontendEvent({
+    username,
+    level: res.ok ? "INFO" : "WARN",
+    event_type: eventType,
+    status: res.status.toString(),
+    error_msg: errorMsg,
+    location: LOCATION,
+    additional_info,
+    notes,
+  });
+
+  if (!res.ok) throw new Error(errorMsg || notes);
+}
 
 /**
  * Create a new trading position.
- *
- * @param position - The position object to be created.
- * @returns Promise resolving to the created position.
  */
 export async function createPosition(position: any): Promise<any> {
   const token = localStorage.getItem("token");
@@ -20,45 +54,52 @@ export async function createPosition(position: any): Promise<any> {
     },
     body: JSON.stringify(position),
   });
-  if (!res.ok) throw new Error("Failed to create position");
+
+  await logPositionEvent("api.positions.create", res, "Create position", {
+    symbol: position?.symbol,
+    position_type: position?.position_type,
+    open_shares: position?.open_shares,
+    open_price: position?.open_price,
+  });
+
   return res.json();
 }
 
 /**
  * Fetch all trading positions for the authenticated user.
- *
- * @returns Promise resolving to an array of positions.
  */
 export async function getMyPositions(): Promise<any[]> {
   const token = localStorage.getItem("token");
   const res = await fetch(`${BASE_URL}/positions`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error("Failed to fetch positions");
-  return res.json();
+
+  const data = res.ok ? await res.clone().json() : [];
+  await logPositionEvent("api.positions.getAll", res, "Fetch my positions", {
+    count: data.length ?? 0,
+  });
+
+  return res.ok ? data : [];
 }
 
 /**
  * Fetch a specific position by its ID.
- *
- * @param positionId - UUID of the position.
- * @returns Promise resolving to the position data.
  */
 export async function getPosition(positionId: string): Promise<any> {
   const token = localStorage.getItem("token");
   const res = await fetch(`${BASE_URL}/positions/${positionId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error("Failed to fetch position");
+
+  await logPositionEvent("api.positions.get", res, "Fetch position", {
+    positionId,
+  });
+
   return res.json();
 }
 
 /**
  * Update a specific trading position.
- *
- * @param positionId - UUID of the position.
- * @param updates - Fields to update in the position.
- * @returns Promise resolving to the updated position.
  */
 export async function updatePosition(
   positionId: string,
@@ -73,14 +114,17 @@ export async function updatePosition(
     },
     body: JSON.stringify(updates),
   });
-  if (!res.ok) throw new Error("Failed to update position");
+
+  await logPositionEvent("api.positions.update", res, "Update position", {
+    positionId,
+    ...updates,
+  });
+
   return res.json();
 }
 
 /**
  * Delete a specific position by ID.
- *
- * @param positionId - UUID of the position.
  */
 export async function deletePosition(positionId: string): Promise<void> {
   const token = localStorage.getItem("token");
@@ -88,5 +132,8 @@ export async function deletePosition(positionId: string): Promise<void> {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error("Failed to delete position");
+
+  await logPositionEvent("api.positions.delete", res, "Delete position", {
+    positionId,
+  });
 }

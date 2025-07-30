@@ -47,7 +47,7 @@ export async function fetchMarketCalendar(
   await logFrontendEvent({
     username,
     level: response.ok ? "INFO" : "WARN",
-    event_type: "api.data/market/calendar",
+    event_type: "api.data.market.calendar",
     status: response.status.toString(),
     error_msg: errorMsg,
     location: LOCATION,
@@ -128,7 +128,7 @@ export async function fetchHistoricalBars(
   await logFrontendEvent({
     username,
     level: response.ok ? "INFO" : "WARN",
-    event_type: "api.data/bars",
+    event_type: "api.data.bars",
     status: response.status.toString(),
     error_msg: errorMsg,
     location: LOCATION,
