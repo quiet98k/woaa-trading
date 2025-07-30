@@ -27,13 +27,23 @@ export async function login(email: string, password: string): Promise<any> {
     body: new URLSearchParams({ username: email, password }),
   });
 
+  let errorMsg: string | null = null;
+  if (!res.ok) {
+    try {
+      const errorData = await res.clone().json(); // clone so we can still parse JSON later
+      errorMsg = errorData.message || res.statusText;
+    } catch {
+      errorMsg = res.statusText;
+    }
+  }
+
   // Log every request attempt with HTTP status
   await logFrontendEvent({
     username: email,
     level: res.ok ? "INFO" : "WARN",
     event_type: eventType,
     status: res.status.toString(),
-    error_msg: res.ok ? null : "Login failed",
+    error_msg: errorMsg,
     location: LOCATION,
     additional_info: {},
     notes: res.ok ? "User logged in successfully" : "Invalid credentials",
@@ -92,12 +102,22 @@ export async function register(
     body: JSON.stringify({ username, email, password }),
   });
 
+  let errorMsg: string | null = null;
+  if (!res.ok) {
+    try {
+      const errorData = await res.clone().json(); // clone so we can still parse JSON later
+      errorMsg = errorData.message || res.statusText;
+    } catch {
+      errorMsg = res.statusText;
+    }
+  }
+
   await logFrontendEvent({
     username: email || "unknown",
     level: res.ok ? "INFO" : "WARN",
     event_type: "api.auth/register",
     status: res.status.toString(),
-    error_msg: res.ok ? null : "Registration failed",
+    error_msg: errorMsg,
     location: LOCATION,
     additional_info: {},
     notes: res.ok ? "User registered successfully" : "Registration failed",
@@ -133,12 +153,22 @@ export async function registerAdmin(
     body: JSON.stringify({ username, email, password, is_admin: true }),
   });
 
+  let errorMsg: string | null = null;
+  if (!res.ok) {
+    try {
+      const errorData = await res.clone().json(); // clone so we can still parse JSON later
+      errorMsg = errorData.message || res.statusText;
+    } catch {
+      errorMsg = res.statusText;
+    }
+  }
+
   await logFrontendEvent({
     username: email || "unknown",
     level: res.ok ? "INFO" : "WARN",
     event_type: "api.auth/register-admin",
     status: res.status.toString(),
-    error_msg: res.ok ? null : "Admin registration failed",
+    error_msg: errorMsg,
     location: LOCATION,
     additional_info: {},
     notes: res.ok

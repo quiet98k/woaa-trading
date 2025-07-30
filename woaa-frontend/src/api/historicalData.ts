@@ -1,6 +1,9 @@
 const BASE_URL = import.meta.env.VITE_API_URL + "/data/bars";
 const CALENDAR_URL = import.meta.env.VITE_API_URL + "/data/market/calendar";
 
+import { logFrontendEvent } from "./logs";
+const LOCATION = "api/historicalData.ts";
+
 export interface FetchBarsOptions {
   symbols: string;
   start: string;
@@ -25,10 +28,33 @@ export async function fetchMarketCalendar(
   url.searchParams.set("end", end);
 
   const token = localStorage.getItem("token");
+  const username = localStorage.getItem("username") || "unknown";
+
   const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  let errorMsg: string | null = null;
+  if (!response.ok) {
+    try {
+      const errorData = await response.clone().json(); // clone so we can still parse JSON later
+      errorMsg = errorData.message || response.statusText;
+    } catch {
+      errorMsg = response.statusText;
+    }
+  }
+
+  await logFrontendEvent({
+    username,
+    level: response.ok ? "INFO" : "WARN",
+    event_type: "api.data/market/calendar",
+    status: response.status.toString(),
+    error_msg: errorMsg,
+    location: LOCATION,
+    additional_info: { start, end },
+    notes: response.ok
+      ? "Fetched market calendar"
+      : "Failed to fetch market calendar",
   });
 
   if (!response.ok) {
@@ -76,10 +102,46 @@ export async function fetchHistoricalBars(
   if (asof) url.searchParams.set("asof", asof);
 
   const token = localStorage.getItem("token");
+  const username = localStorage.getItem("username") || "unknown";
+
   const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${token}`,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  let errorMsg: string | null = null;
+  if (!response.ok) {
+    try {
+      const errorData = await response.clone().json(); // clone so we can still parse JSON later
+      errorMsg = errorData.message || response.statusText;
+    } catch {
+      errorMsg = response.statusText;
+    }
+  }
+
+  const bars = (await response.json()) as Record<string, any[]>;
+  const totalBars = Object.values(bars).reduce(
+    (sum, arr) => sum + arr.length,
+    0
+  );
+  const hasValidBars = totalBars > 0;
+
+  await logFrontendEvent({
+    username,
+    level: response.ok ? "INFO" : "WARN",
+    event_type: "api.data/bars",
+    status: response.status.toString(),
+    error_msg: errorMsg,
+    location: LOCATION,
+    additional_info: {
+      symbols,
+      start,
+      end,
+      timeframe,
+      totalBars,
     },
+    notes: response.ok
+      ? "Fetched historical bars"
+      : "Failed to fetch historical bars",
   });
 
   if (!response.ok) {
@@ -88,9 +150,6 @@ export async function fetchHistoricalBars(
       `Backend API error: ${errorData.message || response.statusText}`
     );
   }
-
-  const bars = (await response.json()) as Record<string, any[]>;
-  const hasValidBars = Object.values(bars).some((arr) => arr.length > 0);
 
   return { bars, invalid: !hasValidBars };
 }
