@@ -62,8 +62,11 @@ export async function createTransaction(tx: any): Promise<any> {
     "Create transaction",
     {
       symbol: tx?.symbol,
-      amount: tx?.amount,
-      type: tx?.type,
+      shares: tx?.shares,
+      price: tx?.price,
+      action: tx?.action,
+      commission_charged: tx?.commission_charged,
+      commission_type: tx?.commission_type,
     }
   );
 
