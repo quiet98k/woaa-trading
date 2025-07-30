@@ -227,7 +227,7 @@ export function UserPortfolio(): JSX.Element {
         );
         logger({
           level: "INFO",
-          event_type: "w",
+          event_type: "logic.threshold.win",
           status: "success",
           error_msg: null,
           additional_info: {
