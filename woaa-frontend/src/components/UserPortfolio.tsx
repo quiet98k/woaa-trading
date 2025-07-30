@@ -12,7 +12,7 @@ import { ChartContext } from "../pages/Dashboard";
 import { useUpdatePause } from "../hooks/useUserSettings";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
-import { useLogger } from "../api/logs";
+import { createLogger } from "../api/logs";
 
 /**
  * @fileoverview Fully self-contained user portfolio panel including user info, balances, and calculated profit with win/loss modal triggers.
@@ -20,9 +20,9 @@ import { useLogger } from "../api/logs";
 
 export function UserPortfolio(): JSX.Element {
   const [latestPrices, setLatestPrices] = useState<Record<string, number>>({});
-  const log = useLogger(import.meta.url);
   const navigate = useNavigate();
   const { data: user } = useMe();
+  const logger = createLogger("UserPortfolio.tsx", user.username);
   const { data: settings } = useUserSettings();
   const { data: positions } = useMyPositions();
   const { mode, setMode } = useContext(ChartContext);
@@ -258,7 +258,7 @@ export function UserPortfolio(): JSX.Element {
 
       if (!user || !settings || !positions) return;
 
-      log({
+      logger({
         level: "INFO",
         event_type: "logic.reset_data_start",
         status: "success",
@@ -323,7 +323,7 @@ export function UserPortfolio(): JSX.Element {
     setMode(newMode);
 
     // Log event
-    log({
+    logger({
       level: "INFO",
       event_type: "ui.toggle_mode",
       status: "success",

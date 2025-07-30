@@ -1,14 +1,13 @@
 // src/utils/logger.ts
 import { v4 as uuidv4 } from "uuid";
 import { UAParser } from "ua-parser-js";
-import { useMe } from "../hooks/useUser";
 
 export interface FrontendLog {
   timestamp: string;
   log_id: string;
   session_id: string;
   device: string;
-  user_name: string;
+  username: string;
   level: "INFO" | "DEBUG" | "ERROR" | "WARN";
   event_type: string;
   status: string; // "success" | "fail" | "200" | "400" etc.
@@ -22,7 +21,7 @@ const BASE_URL = import.meta.env.VITE_API_URL;
 
 // Get device info
 function getDeviceInfo(): string {
-  const parser = new UAParser(); // instantiate with 'new'
+  const parser = new UAParser();
   const { os, browser, device } = parser.getResult();
 
   return (
@@ -30,11 +29,6 @@ function getDeviceInfo(): string {
     `${browser.name ?? "Unknown Browser"} ${browser.version ?? ""}` +
     (device.type ? ` (${device.type})` : "")
   );
-}
-
-// Extract file name from import.meta.url
-function getFileName(importMetaUrl: string): string {
-  return importMetaUrl.split("/").pop()?.split("?")[0] ?? "unknown";
 }
 
 // Generate a session ID for this browser tab/session
@@ -71,27 +65,18 @@ export async function logFrontendEvent(
   }
 }
 
-// Hook-based logger factory
-export function useLogger(importMetaUrl: string) {
-  const me = useMe();
-  const userName = me.data?.username || "guest";
-  const fileName = getFileName(importMetaUrl);
-
+// Simple logger factory (manual fileName & userName)
+export function createLogger(location: string, userName: string) {
   return (
     log: Omit<
       FrontendLog,
-      | "timestamp"
-      | "log_id"
-      | "device"
-      | "location"
-      | "user_name"
-      | "session_id"
+      "timestamp" | "log_id" | "device" | "location" | "username" | "session_id"
     >
   ) => {
     return logFrontendEvent({
       ...log,
-      location: fileName,
-      user_name: userName,
+      location,
+      username: userName,
     });
   };
 }

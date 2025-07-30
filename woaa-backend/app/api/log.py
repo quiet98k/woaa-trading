@@ -10,7 +10,7 @@ class LogEntry(BaseModel):
     log_id: str
     session_id: str
     device: str
-    user_name: str
+    username: str
     level: str
     event_type: str
     status: str

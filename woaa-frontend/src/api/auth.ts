@@ -4,6 +4,8 @@
  */
 
 const BASE_URL = import.meta.env.VITE_API_URL;
+import { logFrontendEvent } from "./logs";
+const LOCATION = "api/auth.ts";
 
 /**
  * Sends a login request to the backend API with the provided email and password.
@@ -14,7 +16,10 @@ const BASE_URL = import.meta.env.VITE_API_URL;
  * @throws Will throw an error if the login request fails.
  */
 export async function login(email: string, password: string): Promise<any> {
-  const res = await fetch(`${BASE_URL}/auth/login`, {
+  const url = `${BASE_URL}/auth/login`;
+  const eventType = "api.auth/login";
+
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -22,15 +27,48 @@ export async function login(email: string, password: string): Promise<any> {
     body: new URLSearchParams({ username: email, password }),
   });
 
+  // Log every request attempt with HTTP status
+  await logFrontendEvent({
+    username: email,
+    level: res.ok ? "INFO" : "WARN",
+    event_type: eventType,
+    status: res.status.toString(),
+    error_msg: res.ok ? null : "Login failed",
+    location: LOCATION,
+    additional_info: {},
+    notes: res.ok ? "User logged in successfully" : "Invalid credentials",
+  });
+
   if (!res.ok) throw new Error("Login failed");
-  return res.json();
+
+  const data = await res.json();
+  localStorage.setItem("username", email);
+
+  return data;
 }
 
 /**
  * Logs out the current user by removing the authentication token from local storage.
  */
-export function logout(): void {
+/**
+ * Logs out the current user by removing the authentication token from local storage.
+ */
+export async function logout(): Promise<void> {
+  const username = localStorage.getItem("username") || "guest";
+
   localStorage.removeItem("token");
+  localStorage.removeItem("username");
+
+  await logFrontendEvent({
+    username: username,
+    level: "INFO",
+    event_type: "logic.logout",
+    status: "success",
+    error_msg: null,
+    location: LOCATION,
+    additional_info: {},
+    notes: "User logged out successfully",
+  });
 }
 
 /**
@@ -47,10 +85,22 @@ export async function register(
   email: string,
   password: string
 ): Promise<any> {
-  const res = await fetch(`${BASE_URL}/auth/register`, {
+  const url = `${BASE_URL}/auth/register`;
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, email, password }),
+  });
+
+  await logFrontendEvent({
+    username: email || "unknown",
+    level: res.ok ? "INFO" : "WARN",
+    event_type: "api.auth/register",
+    status: res.status.toString(),
+    error_msg: res.ok ? null : "Registration failed",
+    location: LOCATION,
+    additional_info: {},
+    notes: res.ok ? "User registered successfully" : "Registration failed",
   });
 
   if (!res.ok) throw new Error("Registration failed");
@@ -71,15 +121,29 @@ export async function registerAdmin(
   email: string,
   password: string
 ): Promise<any> {
+  const url = `${BASE_URL}/auth/register-admin`;
   const token = localStorage.getItem("token");
 
-  const res = await fetch(`${BASE_URL}/auth/register-admin`, {
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({ username, email, password, is_admin: true }),
+  });
+
+  await logFrontendEvent({
+    username: email || "unknown",
+    level: res.ok ? "INFO" : "WARN",
+    event_type: "api.auth/register-admin",
+    status: res.status.toString(),
+    error_msg: res.ok ? null : "Admin registration failed",
+    location: LOCATION,
+    additional_info: {},
+    notes: res.ok
+      ? "Admin registered successfully"
+      : "Admin registration failed",
   });
 
   if (!res.ok) throw new Error("Admin registration failed");
