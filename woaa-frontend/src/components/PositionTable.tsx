@@ -10,6 +10,7 @@ import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
+import { createLogger } from "../api/logs";
 
 /**
  * Table component to display a list of user positions with live open prices.
@@ -23,6 +24,7 @@ export function PositionTable(): JSX.Element {
   const deleteMutation = useDeletePosition();
   const { openPrices, mode } = useContext(ChartContext);
   const { clock } = useMarketClock();
+  const logger = createLogger("UserPortfolio.tsx", user.email);
 
   const [latestPrices, setLatestPrices] = useState<Record<string, number>>({});
   const { subscribe } = useRealTimeData((data) => {
@@ -57,6 +59,14 @@ export function PositionTable(): JSX.Element {
     openPrices: Record<string, number | null>,
     handleClose: (p: any, currentPrice: number, next?: () => void) => void
   ) {
+    logger({
+      level: "INFO",
+      event_type: "ui.flatten_all",
+      status: "success",
+      error_msg: null,
+      additional_info: {},
+      notes: "flatten all unclosed position",
+    });
     const queue = [...positions];
 
     const runNext = () => {
@@ -80,6 +90,20 @@ export function PositionTable(): JSX.Element {
 
   const handleDelete = (p: any) => {
     console.log("[Delete] Sim Balance Before:", user?.sim_balance);
+    logger({
+      level: "INFO",
+      event_type: "ui.delete_position",
+      status: "success",
+      error_msg: null,
+      additional_info: {
+        position_id: p.id,
+        symbol: p.symbol,
+        type: p.position_type,
+        open_price: p.open_price,
+        open_shares: p.open_shares,
+      },
+      notes: "Deleted a position",
+    });
 
     deleteMutation.mutate(p.id, {
       onSuccess: () => {
@@ -108,6 +132,20 @@ export function PositionTable(): JSX.Element {
 
     const position = positions?.find((p) => p.id === selectedPowerUpId);
     if (!position || position.status !== "open") return;
+
+    logger({
+      level: "INFO",
+      event_type: "ui.power_up",
+      status: "success",
+      error_msg: null,
+      additional_info: {
+        position_id: position?.id,
+        open_price: position?.open_price,
+        open_shares: position?.open_shares,
+        position_type: position?.position_type,
+      },
+      notes: "power up position",
+    });
 
     const fee = settings.power_up_fee ?? 0;
     const isReal = settings.power_up_type === "real";
@@ -159,6 +197,22 @@ export function PositionTable(): JSX.Element {
     next?: () => void
   ): void => {
     if (!settings) return;
+
+    logger({
+      level: "INFO",
+      event_type: "ui.close_position",
+      status: "success",
+      error_msg: null,
+      additional_info: {
+        position_id: p.id,
+        symbol: p.symbol,
+        type: p.position_type,
+        open_price: p.open_price,
+        current_price: currentPrice,
+        open_shares: p.open_shares,
+      },
+      notes: "close a position",
+    });
 
     refetchUser().then(({ data: freshUser }) => {
       if (!freshUser) return;
