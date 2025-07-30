@@ -1,6 +1,5 @@
 const BASE_URL = import.meta.env.VITE_API_URL;
 
-import { data } from "react-router-dom";
 import { logFrontendEvent } from "./logs";
 
 const LOCATION = "api/userSettings.ts";
