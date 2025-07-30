@@ -22,7 +22,7 @@ export function UserPortfolio(): JSX.Element {
   const [latestPrices, setLatestPrices] = useState<Record<string, number>>({});
   const navigate = useNavigate();
   const { data: user } = useMe();
-  const logger = createLogger("UserPortfolio.tsx", user.username);
+  const logger = createLogger("UserPortfolio.tsx", user.email);
   const { data: settings } = useUserSettings();
   const { data: positions } = useMyPositions();
   const { mode, setMode } = useContext(ChartContext);
@@ -227,7 +227,7 @@ export function UserPortfolio(): JSX.Element {
         );
         logger({
           level: "INFO",
-          event_type: "logic.threshold.win",
+          event_type: "w",
           status: "success",
           error_msg: null,
           additional_info: {
