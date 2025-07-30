@@ -225,12 +225,48 @@ export function UserPortfolio(): JSX.Element {
         console.log(
           `✅ Profit reached win threshold: profit=${profit}, winThreshold=${winAmount}`
         );
+        logger({
+          level: "INFO",
+          event_type: "logic.threshold.win",
+          status: "success",
+          error_msg: null,
+          additional_info: {
+            simBalance: sim,
+            initialBalance: initial,
+            borrowedMargin: borrowed,
+            unrealizedShortValue,
+            unrealizedLongValue,
+            profit,
+            netWorth,
+            winThreshold: winAmount,
+            lossThreshold: loseAmount,
+          },
+          notes: "Profit reached win threshold",
+        });
         updatePause.mutate(true);
         setWinModal(true);
       } else if (netWorth <= loseAmount) {
         console.log(
           `❌ Net Worth dropped below loss threshold: netWorth=${netWorth}, lossThreshold=${loseAmount}`
         );
+        logger({
+          level: "INFO",
+          event_type: "logic.threshold.lose",
+          status: "success",
+          error_msg: null,
+          additional_info: {
+            simBalance: sim,
+            initialBalance: initial,
+            borrowedMargin: borrowed,
+            unrealizedShortValue,
+            unrealizedLongValue,
+            profit,
+            netWorth,
+            winThreshold: winAmount,
+            lossThreshold: loseAmount,
+          },
+          notes: "Net Worth dropped below loss threshold",
+        });
         updatePause.mutate(true);
         setLoseModal(true);
       }
