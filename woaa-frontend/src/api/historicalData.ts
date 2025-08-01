@@ -37,7 +37,7 @@ export async function fetchMarketCalendar(
   let errorMsg: string | null = null;
   if (!response.ok) {
     try {
-      const errorData = await response.clone().json(); // clone so we can still parse JSON later
+      const errorData = await response.clone().json(); 
       errorMsg = errorData.message || response.statusText;
     } catch {
       errorMsg = response.statusText;

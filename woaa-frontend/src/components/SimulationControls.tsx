@@ -9,6 +9,7 @@ import {
 } from "../hooks/useUserSettings";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useDeletePosition, useMyPositions } from "../hooks/usePositions";
+import { fetchMarketCalendar } from "../api/historicalData";
 
 /**
  * Component that renders simulation controls and shows current sim_time.
@@ -107,12 +108,28 @@ export default function SimulationControls(): JSX.Element {
     updateSpeed.mutate(value);
   };
 
-  const handleRestart = () => {
-    updateStartTime.mutate(localStartDate);
-    setInitialStartDate(localStartDate); // Update reference after successful change
-    handleResetData();
-    updatePause.mutate(false);
-    setIsPaused(false);
+  const handleRestart = async () => {
+    try {
+      // Fetch calendar for the single day of localStartDate
+      const startStr = localStartDate.toString().split("T")[0];
+      const endStr = startStr;
+
+      const calendar = await fetchMarketCalendar(startStr, endStr);
+
+      if (!calendar.has(startStr)) {
+        alert("The selected start date is not a valid market date.");
+        return;
+      }
+
+      // Proceed if valid
+      updateStartTime.mutate(localStartDate);
+      setInitialStartDate(localStartDate);
+      updatePause.mutate(false);
+      setIsPaused(false);
+    } catch (err) {
+      console.error("Failed to validate market date:", err);
+      alert("Failed to validate market date. Please try again.");
+    }
   };
 
   const handleResetData = (): void => {
