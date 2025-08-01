@@ -489,6 +489,19 @@ export function UserPortfolio(): JSX.Element {
                     className="text-green-700 font-bold"
                     onClick={() => {
                       updateUser.mutate({ sim_balance: newSimValue });
+
+                      //ADD LOG
+                      logger({
+                        level: "INFO",
+                        event_type: "ui.edit_sim",
+                        status: "success",
+                        error_msg: null,
+                        additional_info: {
+                          new_sim_balance: newSimValue,
+                        },
+                        notes: "User modify sim balance",
+                      });
+
                       setIsEditingSim(false);
                     }}
                   >
@@ -536,6 +549,19 @@ export function UserPortfolio(): JSX.Element {
                     className="text-blue-700 font-bold"
                     onClick={() => {
                       updateUser.mutate({ real_balance: newRealValue });
+
+                      // ADD LOG
+                      logger({
+                        level: "INFO",
+                        event_type: "ui.edit_real",
+                        status: "success",
+                        error_msg: null,
+                        additional_info: {
+                          new_real_balance: newRealValue,
+                        },
+                        notes: "User modify real balance",
+                      });
+
                       setIsEditingReal(false);
                     }}
                   >
