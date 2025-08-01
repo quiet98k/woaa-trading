@@ -80,6 +80,8 @@ export default function SharesInput(): JSX.Element {
 
     setProcessing(true); // 🔒 Start lock
 
+    //TODO: add log
+
     createTransaction.mutate(
       {
         symbol,

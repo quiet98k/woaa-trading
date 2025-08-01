@@ -496,7 +496,10 @@ export default function Chart() {
         <select
           className="border p-2 rounded-md text-black"
           value={selectedSymbol}
-          onChange={(e) => setSelectedSymbol(e.target.value)}
+          onChange={
+            //TODO: add log
+            (e) => setSelectedSymbol(e.target.value)
+          }
         >
           {Object.entries(SYMBOL_OPTIONS).map(([label, value]) => (
             <option key={value} value={value}>
@@ -507,7 +510,10 @@ export default function Chart() {
         {(["1D/1Min", "1M/1D", "1Y/1M"] as TimeOption[]).map((range) => (
           <button
             key={range}
-            onClick={() => setSelectedRange(range)}
+            onClick={
+              //TODO: add log
+              () => setSelectedRange(range)
+            }
             className={`px-3 py-1 rounded text-sm font-medium ${
               selectedRange === range ? "bg-blue-600 text-white" : "bg-gray-200"
             }`}

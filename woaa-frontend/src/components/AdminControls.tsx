@@ -62,6 +62,9 @@ export function AdminSettingsPanel(): JSX.Element {
   const handleApply = () => {
     if (!settings) return;
 
+    //TODO: check what's changed
+    //TODO: add log
+
     const payload = {
       commission_rate: commissionValue,
       commission_type: commissionType,

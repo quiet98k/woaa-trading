@@ -336,6 +336,7 @@ export default function RealTimeChart() {
   }, [realTimeBar]);
 
   const handleTrack = () => {
+    //TODO: add log
     const upper = inputSymbol.trim().toUpperCase();
     if (/^[A-Z]{1,5}$/.test(upper)) {
       setSymbol(upper);
@@ -370,7 +371,10 @@ export default function RealTimeChart() {
         {(["1D/1Min", "1M/1D", "1Y/1M"] as TimeOption[]).map((opt) => (
           <button
             key={opt}
-            onClick={() => setTimeOption(opt)}
+            onClick={
+              //TODO: add log
+              () => setTimeOption(opt)
+            }
             className={`px-3 py-1 rounded text-sm font-medium ${
               timeOption === opt ? "bg-blue-600 text-white" : "bg-gray-200"
             }`}

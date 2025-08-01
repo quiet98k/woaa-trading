@@ -47,6 +47,7 @@ export default function RealTimeSharesInput(): JSX.Element {
   const handleStartTracking = () => {
     const trimmed = symbol.trim().toUpperCase();
     if (trimmed) {
+      //TODO: add log
       trackedSymbolRef.current = trimmed; // <== set ref
       setTrackedSymbol(trimmed); // just for UI
       setTradePrice(null); // Clear old price
@@ -90,6 +91,8 @@ export default function RealTimeSharesInput(): JSX.Element {
     const { setProcessing } = useTradeProcessing.getState();
 
     setProcessing(true); // 🔒 Start lock
+
+    //TODO: add log
 
     createTransaction.mutate(
       {

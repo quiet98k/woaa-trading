@@ -64,6 +64,7 @@ export function useRealTimeData(onMessage?: (msg: any) => void) {
   );
 
   const subscribe = useCallback(
+    //TODO: add log
     (symbol: string, type: SubscriptionType = "trades") => {
       sendMessage("subscribe", symbol, type);
     },
@@ -71,15 +72,20 @@ export function useRealTimeData(onMessage?: (msg: any) => void) {
   );
 
   const unsubscribe = useCallback(
+    //TODO: add log
     (symbol: string, type: SubscriptionType = "trades") => {
       sendMessage("unsubscribe", symbol, type);
     },
     [sendMessage]
   );
 
-  const getSubscriptions = useCallback(() => {
-    sendMessage("get_subscriptions");
-  }, [sendMessage]);
+  const getSubscriptions = useCallback(
+    //TODO: add log
+    () => {
+      sendMessage("get_subscriptions");
+    },
+    [sendMessage]
+  );
 
   return {
     connected,

@@ -18,6 +18,9 @@ export default function MarketStatusBanner() {
   const { clock, loading } = useMarketClock();
   const [timeLeft, setTimeLeft] = useState("");
 
+  //TODO: end-of-day charges trigger
+  //TODO: add log for above
+
   useEffect(() => {
     if (!clock) return;
 

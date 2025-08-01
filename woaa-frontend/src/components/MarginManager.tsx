@@ -39,6 +39,8 @@ export function MarginManager(): JSX.Element {
   const handleBorrow = () => {
     if (borrowAmount <= 0 || borrowAmount > remainingBorrowable) return;
 
+    //TODO: add log
+
     updateSettings.mutate({
       ...settings,
       borrowed_margin: borrowed + borrowAmount,
@@ -59,6 +61,8 @@ export function MarginManager(): JSX.Element {
       simBalance < paybackAmount
     )
       return;
+
+    //TODO: add log
 
     updateSettings.mutate({
       ...settings,

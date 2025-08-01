@@ -68,6 +68,8 @@ export default function SimulationControls(): JSX.Element {
       }
     }
 
+    //TODO: add log
+
     // Update backend balances
     updateBalances.mutate({
       sim_balance: newSim,
@@ -86,6 +88,9 @@ export default function SimulationControls(): JSX.Element {
   }, [settings]);
 
   useEffect(() => {
+    //TODO: Modify end-of-day change for historical simulation that only trigger when mode is historical
+    //TODO: add log
+
     if (!simTime) return;
 
     const currentDay = new Date(simTime).toISOString().slice(0, 10); // YYYY-MM-DD
@@ -101,11 +106,13 @@ export default function SimulationControls(): JSX.Element {
     const newPaused = !isPaused;
     updatePause.mutate(newPaused);
     setIsPaused(newPaused);
+    //TODO: add log
   };
 
   const handleSpeedChange = (value: number) => {
     setLocalSpeed(value);
     updateSpeed.mutate(value);
+    //TODO: add log
   };
 
   const handleRestart = async () => {
@@ -121,6 +128,7 @@ export default function SimulationControls(): JSX.Element {
         return;
       }
 
+      //TODO: add log
       // Proceed if valid
       updateStartTime.mutate(localStartDate);
       setInitialStartDate(localStartDate);
@@ -136,6 +144,7 @@ export default function SimulationControls(): JSX.Element {
     if (!user || !settings || !positions) return;
 
     console.log("[Reset Data] Start");
+    //TODO: add log
 
     // Step 1: Reset sim_balance (user model)
     const initialSim = settings.initial_sim_balance ?? 10000;
@@ -269,6 +278,7 @@ export default function SimulationControls(): JSX.Element {
         </button>
 
         <button
+          //TODO: add log for manual trigger end-of-day charges
           onClick={triggerEndOfDayCharges}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md text-xs"
         >

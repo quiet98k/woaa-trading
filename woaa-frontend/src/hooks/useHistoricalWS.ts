@@ -90,11 +90,13 @@ export function useHistoricalWS(
   );
 
   const subscribe = useCallback(
+    //TODO: add log
     (symbol: string) => sendMessage("subscribe", symbol),
     [sendMessage]
   );
 
   const unsubscribe = useCallback(
+    //TODO: add log
     (symbol: string) => sendMessage("unsubscribe", symbol),
     [sendMessage]
   );
