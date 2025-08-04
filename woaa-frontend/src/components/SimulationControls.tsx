@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from "react";
+import { useContext, useEffect, useState, type JSX } from "react";
 import { useSimTime } from "../hooks/useSimTimeSocket";
 import {
   useUserSettings,
@@ -10,6 +10,7 @@ import {
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useDeletePosition, useMyPositions } from "../hooks/usePositions";
 import { fetchMarketCalendar } from "../api/historicalData";
+import { ChartContext } from "../pages/Dashboard";
 
 /**
  * Component that renders simulation controls and shows current sim_time.
@@ -20,6 +21,8 @@ import { fetchMarketCalendar } from "../api/historicalData";
  */
 export default function SimulationControls(): JSX.Element {
   const { data: user, isLoading, error } = useMe();
+
+  const { mode } = useContext(ChartContext);
 
   const { simTime, connected } = useSimTime();
   const { data: settings } = useUserSettings();
@@ -88,10 +91,9 @@ export default function SimulationControls(): JSX.Element {
   }, [settings]);
 
   useEffect(() => {
-    //TODO: Modify end-of-day change for historical simulation that only trigger when mode is historical
     //TODO: add log
 
-    if (!simTime) return;
+    if (!simTime || mode !== "historical") return;
 
     const currentDay = new Date(simTime).toISOString().slice(0, 10); // YYYY-MM-DD
 
