@@ -3,7 +3,17 @@
 set -e
 set -o pipefail
 
-if ! git diff-index --quiet HEAD --; then
+# Ensure we're in a git repo
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "❌ Not a git repository. Aborting."
+  exit 1
+fi
+
+echo "🔎 Git status:"
+git status -sb
+
+# Stop if there are uncommitted changes (staged or unstaged)
+if [[ -n "$(git status --porcelain)" ]]; then
   echo "⚠️  Uncommitted changes detected. Please commit or stash them first."
   exit 1
 fi
@@ -35,7 +45,7 @@ if [[ "$yn" == "y" || "$yn" == "Y" ]]; then
     case $option in
       "Main stack") sudo docker compose logs -f ;;
       "Loki stack") sudo docker compose -f loki/docker-compose.yaml logs -f ;;
-      "Both") 
+      "Both")
         sudo docker compose logs -f &
         sudo docker compose -f loki/docker-compose.yaml logs -f
         ;;
