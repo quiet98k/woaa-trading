@@ -9,8 +9,6 @@ import App from "./App.tsx";
 // Initialize React Query client
 const queryClient = new QueryClient();
 
-document.documentElement.classList.add("dark");
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
