@@ -442,6 +442,20 @@ export function UserPortfolio(): JSX.Element {
                   <span className="text-gray-600">Regular User</span>
                 )}
               </div>
+              <div>
+                <strong>Local Time:</strong>{" "}
+                {new Date().toLocaleString("en-US", {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                })}
+              </div>
+              <div>
+                <strong>UTC Timestamp:</strong> {new Date().toISOString()}
+              </div>
             </div>
 
             {/* Logout & Toggle */}
