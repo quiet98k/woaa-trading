@@ -1,10 +1,6 @@
 import { type JSX, useContext, useEffect, useState } from "react";
-import {
-  useMyPositions,
-  useDeletePosition,
-  useUpdatePosition,
-} from "../hooks/usePositions";
-import { useCreateTransaction } from "../hooks/useTransactions";
+import { useMyPositions, useDeletePosition } from "../hooks/usePositions";
+// import { useCreateTransaction } from "../hooks/useTransactions";
 import { ChartContext } from "../pages/Dashboard";
 import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";
@@ -21,7 +17,7 @@ import { useCloseTrade } from "../hooks/useTrade";
  */
 export function PositionTable(): JSX.Element {
   const { data: positions, isLoading } = useMyPositions();
-  const { data: user, refetch: refetchUser } = useMe();
+  const { data: user } = useMe();
   const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const deleteMutation = useDeletePosition();
   const { openPrices, mode } = useContext(ChartContext);
@@ -49,9 +45,9 @@ export function PositionTable(): JSX.Element {
     }
   }, [mode, symbols, subscribe]);
 
-  const createTransaction = useCreateTransaction();
+  // const createTransaction = useCreateTransaction();
   const { data: settings } = useUserSettings();
-  const updatePosition = useUpdatePosition();
+  // const updatePosition = useUpdatePosition();
   const [selectedPowerUpId, setSelectedPowerUpId] = useState<string | null>(
     null
   );
