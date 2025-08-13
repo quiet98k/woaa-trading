@@ -7,7 +7,7 @@ from app.database import get_db
 from app.auth import get_current_user
 from app.models.user import User
 
-from app.services.trade import create_trade_service  # ✅ import service
+from app.services.trade import close_trade_service, create_trade_service  # ✅ import service
 
 router = APIRouter(prefix="/trades", tags=["trades"])
 
@@ -35,22 +35,34 @@ async def create_trade(
     )
 
 
-@router.post("/item/{trade_id}/close", status_code=status.HTTP_200_OK)
+@router.post("/item/{position_id}/close", status_code=status.HTTP_200_OK)
 async def close_trade(
-    trade_id: UUID,
-    payload: dict,  # TODO: replace dict with TradeCloseRequest schema
+    position_id: UUID,
+    payload: dict,  # Expected keys:
+                    # {
+                    #   "current_price": float,   # required, > 0
+                    #   "notes": str (optional)   # optional notes
+                    # }
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Close an existing trade opened by the authenticated user.
-    """
-    # TODO: implement close trade logic
-    # - verify ownership/authorization
-    # - compute PnL, commission, balance updates
-    # - update position status and create closing transaction
-    # - return updated TradeOut
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented")
+    """Close an existing open position belonging to the authenticated user."""
+    # Minimal inline validation since we're not using a schema
+    if "current_price" not in payload:
+        raise HTTPException(status_code=400, detail="Missing field: current_price")
+    current_price = payload["current_price"]
+    if not isinstance(current_price, (int, float)) or current_price <= 0:
+        raise HTTPException(status_code=400, detail="current_price must be a positive number")
+
+    notes = payload.get("notes", "")
+
+    return await close_trade_service(
+        db=db,
+        user_id=current_user.id,
+        position_id=position_id,
+        current_price=float(current_price),
+        notes=notes,
+    )
 
 
 @router.delete("/item/{trade_id}", status_code=status.HTTP_204_NO_CONTENT)

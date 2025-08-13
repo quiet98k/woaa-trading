@@ -43,3 +43,45 @@ export async function createTrade(trade: any): Promise<any> {
 
   return res.json();
 }
+
+/**
+ * Close an existing position (sell for Long, cover for Short).
+ *
+ * @param positionId - ID of the position to close
+ * @param currentPrice - execution price (> 0)
+ * @param notes - optional notes
+ */
+export async function closeTrade(
+  positionId: string,
+  currentPrice: number,
+  notes: string = ""
+): Promise<any> {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(
+    `${import.meta.env.VITE_API_URL}/trades/item/${positionId}/close`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ current_price: currentPrice, notes }),
+    }
+  );
+
+  // TODO: add log
+
+  if (!res.ok) {
+    let errorMsg = res.statusText;
+    try {
+      const errData = await res.clone().json();
+      errorMsg = errData.detail || errData.message || res.statusText;
+    } catch {
+      /* ignore JSON parse errors */
+    }
+    throw new Error(errorMsg);
+  }
+
+  return res.json();
+}

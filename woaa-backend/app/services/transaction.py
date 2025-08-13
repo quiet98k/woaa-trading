@@ -21,16 +21,16 @@ async def create_transaction(db: AsyncSession, tx_data: TransactionCreate, user_
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    total_cost = tx_data.price * tx_data.shares
+    # total_cost = tx_data.price * tx_data.shares
 
-    if tx_data.action in {"buy", "cover"}:
-        if user.sim_balance < total_cost:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Insufficient simulated funds: need ${total_cost:.2f}, have ${user.sim_balance:.2f}"
-            )
-        user.sim_balance -= total_cost
-        db.add(user)
+    # if tx_data.action in {"buy", "cover"}:
+    #     if user.sim_balance < total_cost:
+    #         raise HTTPException(
+    #             status_code=400,
+    #             detail=f"Insufficient simulated funds: need ${total_cost:.2f}, have ${user.sim_balance:.2f}"
+    #         )
+    #     user.sim_balance -= total_cost
+    #     db.add(user)
 
     transaction = Transaction(**tx_data.model_dump(), user_id=user_id)
     db.add(transaction)

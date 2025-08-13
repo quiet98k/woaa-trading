@@ -12,6 +12,7 @@ import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
 import { createLogger } from "../api/logs";
 import { useTradeProcessing } from "../stores/useTradeProcessing";
+import { useCloseTrade } from "../hooks/useTrade";
 
 /**
  * Table component to display a list of user positions with live open prices.
@@ -192,13 +193,16 @@ export function PositionTable(): JSX.Element {
     setSelectedPowerUpId(null);
   };
 
-  const handleClose = (
+  const closeTradeMutation = useCloseTrade();
+
+  const handleClose = async (
     p: any,
     currentPrice: number,
     next?: () => void
-  ): void => {
+  ): Promise<void> => {
     if (!settings) return;
 
+    // optional: keep your existing UI log
     logger({
       level: "INFO",
       event_type: "ui.close_position",
@@ -215,103 +219,24 @@ export function PositionTable(): JSX.Element {
       notes: "close a position",
     });
 
-    refetchUser().then(({ data: freshUser }) => {
-      if (!freshUser) return;
+    const { setProcessing } = useTradeProcessing.getState();
+    setProcessing(true);
 
-      const shares = p.open_shares;
-      const grossProceeds =
-        currentPrice * (p.position_type === "Long" ? shares : -shares);
-
-      const commissionRaw = currentPrice * shares * settings.commission_rate;
-      const commission = Math.abs(commissionRaw);
-
-      const netProceeds =
-        grossProceeds - (settings.commission_type === "sim" ? commission : 0);
-
-      const realized =
-        (currentPrice - p.open_price) *
-        (p.position_type === "Long" ? shares : -shares);
-
-      console.log("[Close Trade Info]", {
-        id: p.id,
-        symbol: p.symbol,
-        type: p.position_type,
-        shares,
-        openPrice: p.open_price,
+    try {
+      await closeTradeMutation.mutateAsync({
+        positionId: p.id,
         currentPrice,
-        grossProceeds,
-        commissionType: settings.commission_type,
-        commission: parseFloat(commission.toFixed(2)),
-        netProceeds,
-        realizedPL: realized,
-        simBefore: freshUser.sim_balance,
-        realBefore: freshUser.real_balance,
+        notes: "", // add any notes if you want to pass them through
       });
 
-      const { setProcessing } = useTradeProcessing.getState();
-
-      setProcessing(true);
-
-      createTransaction.mutate(
-        {
-          symbol: p.symbol,
-          shares,
-          price: currentPrice,
-          action: p.position_type === "Long" ? "sell" : "cover",
-          notes: "",
-          commission_charged: parseFloat(commission.toFixed(2)),
-          commission_type: settings.commission_type,
-        },
-        {
-          onSuccess: () => {
-            const updatedBalances: {
-              sim_balance?: number;
-              real_balance?: number;
-            } = {};
-
-            if (settings.commission_type === "real") {
-              updatedBalances.real_balance = parseFloat(
-                ((freshUser.real_balance ?? 0) - commission).toFixed(2)
-              );
-              updatedBalances.sim_balance = parseFloat(
-                ((freshUser.sim_balance ?? 0) + grossProceeds).toFixed(2)
-              );
-            } else {
-              updatedBalances.sim_balance = parseFloat(
-                ((freshUser.sim_balance ?? 0) + netProceeds).toFixed(2)
-              );
-            }
-
-            // 1️⃣ Update balances first
-            updateBalances.mutate(updatedBalances, {
-              onSuccess: () => {
-                // 2️⃣ Then update position
-                updatePosition.mutate(
-                  {
-                    positionId: p.id,
-                    updates: {
-                      close_price: currentPrice,
-                      close_shares: shares,
-                      close_time: new Date().toISOString(),
-                      realized_pl: realized,
-                      status: "closed",
-                    },
-                  },
-                  {
-                    onSuccess: () => {
-                      if (next) next();
-                    },
-                    onSettled: () => setProcessing(false), // ✅ Release lock after everything
-                  }
-                );
-              },
-              onError: () => setProcessing(false),
-            });
-          },
-          onError: () => setProcessing(false),
-        }
-      );
-    });
+      // backend updates balances, creates transaction, and closes the position
+      if (next) next();
+    } catch (err: any) {
+      console.error("Close trade failed:", err);
+      alert(err.message || "Failed to close trade");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
