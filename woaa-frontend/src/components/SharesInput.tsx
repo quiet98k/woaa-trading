@@ -4,12 +4,13 @@
  */
 
 import { useState, type JSX, useContext } from "react";
-import { useCreatePosition } from "../hooks/usePositions";
-import { useCreateTransaction } from "../hooks/useTransactions";
-import { useMe, useUpdateUserBalances } from "../hooks/useUser";
+// import { useCreatePosition } from "../hooks/usePositions";
+// import { useCreateTransaction } from "../hooks/useTransactions";
+import { useMe } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { ChartContext } from "../pages/Dashboard";
 import { useTradeProcessing } from "../stores/useTradeProcessing";
+import { useCreateTrade } from "../hooks/useTrade";
 
 /**
  * Component for entering the number of shares to buy/short for the selected stock.
@@ -18,12 +19,13 @@ import { useTradeProcessing } from "../stores/useTradeProcessing";
  */
 export default function SharesInput(): JSX.Element {
   const [shares, setShares] = useState<number>(1);
-  const createTransaction = useCreateTransaction();
-  const createPosition = useCreatePosition();
+  // const createTransaction = useCreateTransaction();
+  // const createPosition = useCreatePosition();
   const { data: user } = useMe();
-  const updateBalances = useUpdateUserBalances(user?.id ?? "");
+  // const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const { data: settings } = useUserSettings();
   const { symbol, openPrices } = useContext(ChartContext);
+  const createTradeMutation = useCreateTrade();
 
   const openPrice = openPrices[symbol];
 
@@ -33,95 +35,32 @@ export default function SharesInput(): JSX.Element {
     );
   }
 
-  const handleTrade = (type: "Long" | "Short") => {
+  const handleTrade = async (type: "Long" | "Short") => {
     if (!user || !settings || !openPrice || !symbol) return;
     if (shares <= 0) {
       alert("Shares must be greater than 0.");
       return;
     }
 
-    const baseCost = parseFloat((shares * openPrice).toFixed(2));
-    const commissionRaw = baseCost * settings.commission_rate;
-    const commission = parseFloat(commissionRaw.toFixed(2));
-
-    const totalSimCost = type === "Long" ? -baseCost : baseCost;
-
-    const simCommission = settings.commission_type === "sim" ? commission : 0;
-    const realCommission = settings.commission_type === "real" ? commission : 0;
-
-    const newSimBalance = parseFloat(
-      ((user.sim_balance ?? 0) + totalSimCost - simCommission).toFixed(2)
-    );
-    const newRealBalance = parseFloat(
-      ((user.real_balance ?? 0) - realCommission).toFixed(2)
-    );
-
-    // 🔍 Log trade details
-    console.log("[Trade Info]", {
-      type,
-      shares,
-      openPrice,
-      baseCost,
-      totalSimCost,
-      commissionType: settings.commission_type,
-      commission,
-    });
-
-    if (newSimBalance < 0) {
-      alert("Insufficient simulated balance (including commission).");
-      return;
-    }
-    if (newRealBalance < 0) {
-      alert("Insufficient real balance to cover commission.");
-      return;
-    }
-
     const { setProcessing } = useTradeProcessing.getState();
+    setProcessing(true);
 
-    setProcessing(true); // 🔒 Start lock
-
-    //TODO: add log
-
-    createTransaction.mutate(
-      {
+    try {
+      await createTradeMutation.mutateAsync({
         symbol,
         shares,
         price: openPrice,
         action: type === "Long" ? "buy" : "short",
         notes: "",
-        commission_charged: commission,
-        commission_type: settings.commission_type,
-      },
-      {
-        onSuccess: () => {
-          // 1️⃣ Create position first
-          createPosition.mutate(
-            {
-              symbol,
-              position_type: type,
-              open_price: openPrice,
-              open_shares: shares,
-            },
-            {
-              onSuccess: () => {
-                // 2️⃣ Update balances after position
-                updateBalances.mutate(
-                  {
-                    sim_balance: newSimBalance,
-                    real_balance: newRealBalance,
-                  },
-                  {
-                    onSettled: () => setProcessing(false), // ✅ Always release lock
-                  }
-                );
-              },
-              onError: () => setProcessing(false),
-            }
-          );
-        },
-        onError: () => setProcessing(false),
-      }
-    );
+      });
+
+      console.log("Trade created successfully");
+    } catch (err: any) {
+      console.error("Trade creation failed:", err);
+      // alert(err.message || "Failed to create trade");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (

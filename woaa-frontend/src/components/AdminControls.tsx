@@ -127,14 +127,14 @@ export function AdminSettingsPanel(): JSX.Element {
           label="Commission"
           value={commissionValue}
           onChange={setCommissionValue}
-          unit="%"
+          unit=""
           toggleType={commissionType}
           onToggle={() =>
             setCommissionType((prev) => (prev === "real" ? "sim" : "real"))
           }
           area="a"
-          max={10}
-          step={0.1}
+          max={100}
+          step={1}
         />
 
         <SettingCard

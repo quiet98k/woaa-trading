@@ -1,16 +1,12 @@
 import { useRef, useState, type JSX } from "react";
-import { useCreateTransaction } from "../hooks/useTransactions";
-import { useCreatePosition } from "../hooks/usePositions";
-import { useMe, useUpdateUserBalances } from "../hooks/useUser";
+import { useMe } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
 import { useTradeProcessing } from "../stores/useTradeProcessing";
+import { useCreateTrade } from "../hooks/useTrade"; // ✅ new hook
 
 export default function RealTimeSharesInput(): JSX.Element {
-  const createTransaction = useCreateTransaction();
-  const createPosition = useCreatePosition();
-
   const [symbol, setSymbol] = useState("");
   const [shares, setShares] = useState<number>(1);
   const [trackedSymbol, setTrackedSymbol] = useState<string | null>(null);
@@ -19,121 +15,58 @@ export default function RealTimeSharesInput(): JSX.Element {
   const trackedSymbolRef = useRef<string | null>(null);
 
   const { data: user } = useMe();
-  const updateBalances = useUpdateUserBalances(user?.id ?? "");
   const { data: settings } = useUserSettings();
   const { clock, loading: clockLoading } = useMarketClock();
-
   const marketOpen = clock?.is_open;
 
   const { subscribe } = useRealTimeData((data) => {
     if (!trackedSymbolRef.current) return;
-
     const msg = Array.isArray(data) ? data[0] : data;
-
-    if (msg?.T === "t") {
-      const match = msg.S === trackedSymbolRef.current;
-      // console.log(
-      //   `[${match ? "✅ Match" : "🚫 Mismatch"}] Trade for ${msg.S} @ $${
-      //     msg.p
-      //   } — tracking ${trackedSymbolRef.current}`
-      // );
-      if (match) {
-        setTradePrice(msg.p);
-        setTradeTime(msg.t); // save the timestamp
-      }
+    if (msg?.T === "t" && msg.S === trackedSymbolRef.current) {
+      setTradePrice(msg.p);
+      setTradeTime(msg.t);
     }
   });
+
+  const createTradeMutation = useCreateTrade();
 
   const handleStartTracking = () => {
     const trimmed = symbol.trim().toUpperCase();
     if (trimmed) {
-      //TODO: add log
-      trackedSymbolRef.current = trimmed; // <== set ref
-      setTrackedSymbol(trimmed); // just for UI
-      setTradePrice(null); // Clear old price
-      setTradeTime(null); // Clear old timestamp
+      trackedSymbolRef.current = trimmed;
+      setTrackedSymbol(trimmed);
+      setTradePrice(null);
+      setTradeTime(null);
       subscribe(trimmed, "trades");
     }
   };
 
-  const handleTrade = (type: "Long" | "Short") => {
+  const handleTrade = async (type: "Long" | "Short") => {
     if (!user || !settings || !tradePrice || !trackedSymbol) return;
     if (shares <= 0) {
       alert("Shares must be greater than 0.");
       return;
     }
 
-    const baseCost = parseFloat((shares * tradePrice).toFixed(2));
-    const commissionRaw = baseCost * settings.commission_rate;
-    const commission = parseFloat(commissionRaw.toFixed(2));
-
-    const totalSimCost = type === "Long" ? -baseCost : baseCost;
-
-    const simCommission = settings.commission_type === "sim" ? commission : 0;
-    const realCommission = settings.commission_type === "real" ? commission : 0;
-
-    const newSimBalance = parseFloat(
-      ((user.sim_balance ?? 0) + totalSimCost - simCommission).toFixed(2)
-    );
-    const newRealBalance = parseFloat(
-      ((user.real_balance ?? 0) - realCommission).toFixed(2)
-    );
-
-    if (newSimBalance < 0) {
-      alert("Insufficient simulated balance (including commission).");
-      return;
-    }
-    if (newRealBalance < 0) {
-      alert("Insufficient real balance to cover commission.");
-      return;
-    }
-
     const { setProcessing } = useTradeProcessing.getState();
+    setProcessing(true);
 
-    setProcessing(true); // 🔒 Start lock
-
-    //TODO: add log
-
-    createTransaction.mutate(
-      {
+    try {
+      await createTradeMutation.mutateAsync({
         symbol: trackedSymbol,
         shares,
         price: tradePrice,
         action: type === "Long" ? "buy" : "short",
         notes: "",
-        commission_charged: commission,
-        commission_type: settings.commission_type,
-      },
-      {
-        onSuccess: () => {
-          // 1️⃣ Create position
-          createPosition.mutate(
-            {
-              symbol: trackedSymbol,
-              position_type: type,
-              open_price: tradePrice,
-              open_shares: shares,
-            },
-            {
-              onSuccess: () => {
-                // 2️⃣ Update balances after position
-                updateBalances.mutate(
-                  {
-                    sim_balance: newSimBalance,
-                    real_balance: newRealBalance,
-                  },
-                  {
-                    onSettled: () => setProcessing(false), // ✅ Release lock after all done
-                  }
-                );
-              },
-              onError: () => setProcessing(false),
-            }
-          );
-        },
-        onError: () => setProcessing(false),
-      }
-    );
+      });
+
+      console.log("Trade created successfully");
+    } catch (err: any) {
+      console.error("Trade creation failed:", err);
+      alert(err.message || "Failed to create trade");
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
@@ -156,38 +89,6 @@ export default function RealTimeSharesInput(): JSX.Element {
       </div>
 
       {/* Price Display */}
-
-      {/* {trackedSymbol && (
-        <>
-          {clockLoading ? (
-            <p className="text-xs text-gray-600">Checking market status...</p>
-          ) : marketOpen ? (
-            tradePrice ? (
-              <p className="text-xs text-gray-600">
-                {trackedSymbol} @ ${tradePrice.toFixed(2)}
-                {tradeTime && (
-                  <span className="ml-2 text-gray-400">
-                    ({new Date(tradeTime).toLocaleTimeString()})
-                  </span>
-                )}
-              </p>
-            ) : (
-              <p className="text-xs text-orange-500">Waiting for price...</p>
-            )
-          ) : tradePrice ? (
-            <p className="text-xs text-gray-600">
-              {trackedSymbol} @ ${tradePrice.toFixed(2)}
-              {tradeTime && (
-                <span className="ml-2 text-gray-400">
-                  ({new Date(tradeTime).toLocaleTimeString()})
-                </span>
-              )}
-            </p>
-          ) : (
-            <p className="text-xs text-orange-500">Waiting for price...</p>
-          )}
-        </>
-      )} */}
       {trackedSymbol && (
         <>
           {clockLoading ? (
@@ -228,7 +129,6 @@ export default function RealTimeSharesInput(): JSX.Element {
         <button
           onClick={() => handleTrade("Long")}
           disabled={!tradePrice || !marketOpen}
-          // disabled={!tradePrice}
           className="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs py-1 rounded-md disabled:opacity-50"
         >
           Buy
@@ -236,7 +136,6 @@ export default function RealTimeSharesInput(): JSX.Element {
         <button
           onClick={() => handleTrade("Short")}
           disabled={!tradePrice || !marketOpen}
-          // disabled={!tradePrice}
           className="flex-1 bg-red-500 hover:bg-red-600 text-white text-xs py-1 rounded-md disabled:opacity-50"
         >
           Short
