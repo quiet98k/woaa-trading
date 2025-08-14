@@ -218,3 +218,106 @@ async def close_trade_service(
             "real_balance": user.real_balance,
         },
     }
+
+async def delete_trade_service(
+    db: AsyncSession,
+    user_id: UUID,
+    position_id: UUID,
+):
+    """
+    Power-up delete flow (no transaction deletion):
+      1) Load user, settings, position (must be open & owned by user)
+      2) Charge power-up fee (from real if type='real', else from sim); error if insufficient
+      3) Refund principal at entry price to SIM balance (always)
+      4) Delete the position (only)
+      5) Commit and return updated balances + brief summary
+    """
+
+    # 1) Load user
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # 2) Load settings
+    settings = await get_user_setting(db, user_id)
+    if not settings:
+        raise HTTPException(status_code=400, detail="User settings not found")
+
+    # Power-up fee & wallet
+    fee = round(float(settings.power_up_fee or 0.0), 2)
+
+
+    # 3) Load position and validate
+    position = await get_position_by_id(db, position_id)
+    if not position or position.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Position not found or unauthorized")
+    if position.status != "open":
+        raise HTTPException(status_code=400, detail="Position already closed")
+
+    symbol = position.symbol
+    shares = float(position.open_shares)
+    open_price = float(position.open_price)
+    is_long = position.position_type == "Long"
+
+    # ---- Atomic section ----
+    # ---- Do work, then commit (no nested begin) ----
+    try:
+        await db.refresh(user)
+
+        sim_balance = float(user.sim_balance or 0.0)
+        real_balance = float(user.real_balance or 0.0)
+
+        # 4) Charge fee first
+        if fee > 0:
+            if settings.power_up_type == "real":
+                if real_balance < fee:
+                    raise HTTPException(status_code=400, detail="Insufficient real balance for power-up fee.")
+                real_balance -= fee
+            else:  # sim
+                if sim_balance < fee:
+                    raise HTTPException(status_code=400, detail="Insufficient simulated balance for power-up fee.")
+                sim_balance -= fee
+
+        # 5) Refund principal (ALWAYS to SIM)
+        refund = open_price * (shares if is_long else -shares)
+        sim_balance = round(sim_balance + refund, 2)
+        real_balance = round(real_balance, 2)
+
+        if sim_balance < 0:
+            raise HTTPException(status_code=400, detail="Insufficient simulated balance after refund/fee.")
+
+        # Apply balances
+        user.sim_balance = sim_balance
+        user.real_balance = real_balance
+        db.add(user)
+
+        # Delete position only
+        await db.delete(position)
+
+        # Commit all changes
+        await db.commit()
+
+    except Exception:
+        await db.rollback()
+        raise
+
+
+    await db.refresh(user)
+
+    return {
+        "deleted": {
+            "position_id": str(position_id),
+            "symbol": symbol,
+            "shares": shares,
+            "open_price": open_price,
+            "direction": "Long" if is_long else "Short",
+            "fee_charged": fee,
+            "fee_wallet": settings.power_up_type,
+            "refund_applied_to": "sim_balance",
+            "refund_amount": round(refund, 2),
+        },
+        "updated_balances": {
+            "sim_balance": user.sim_balance,
+            "real_balance": user.real_balance,
+        },
+    }

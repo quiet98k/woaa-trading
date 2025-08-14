@@ -7,7 +7,7 @@ from app.database import get_db
 from app.auth import get_current_user
 from app.models.user import User
 
-from app.services.trade import close_trade_service, create_trade_service  # ✅ import service
+from app.services.trade import close_trade_service, create_trade_service, delete_trade_service  # ✅ import service
 
 router = APIRouter(prefix="/trades", tags=["trades"])
 
@@ -65,18 +65,21 @@ async def close_trade(
     )
 
 
-@router.delete("/item/{trade_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/item/{position_id}", status_code=status.HTTP_200_OK)
 async def delete_trade(
-    trade_id: UUID,
+    position_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
-    Delete a trade owned by the authenticated user.
+    Power-up delete:
+      - charges fee (real vs sim per user settings)
+      - refunds principal to sim
+      - deletes the position only
+      - returns updated balances and summary
     """
-    # TODO: implement delete trade logic
-    # - verify ownership/authorization
-    # - ensure business rules allow deletion (e.g., only if not settled)
-    # - perform deletion
-    # - return 204 on success
-    raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail="Not implemented")
+    return await delete_trade_service(
+        db=db,
+        user_id=current_user.id,
+        position_id=position_id,
+    )

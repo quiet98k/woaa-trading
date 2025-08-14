@@ -1,6 +1,6 @@
 // hooks/useTrades.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { closeTrade, createTrade } from "../api/trade";
+import { closeTrade, createTrade, deleteTrade } from "../api/trade";
 import { useTradeProcessing } from "../stores/useTradeProcessing";
 
 export function useCreateTrade() {
@@ -43,6 +43,25 @@ export function useCloseTrade() {
       ]);
     },
     onError: (e: any) => alert(e.message || "Failed to close trade"),
+    onSettled: () => useTradeProcessing.getState().stop(),
+  });
+}
+
+export function useDeleteTrade() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["deleteTrade"],
+    mutationFn: (positionId: string) => deleteTrade(positionId),
+    onMutate: () => useTradeProcessing.getState().start(),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["me"] }),
+        qc.invalidateQueries({ queryKey: ["transactions"] }),
+        qc.invalidateQueries({ queryKey: ["positions"] }),
+      ]);
+    },
+    onError: (e: any) => alert(e.message || "Failed to delete trade"),
     onSettled: () => useTradeProcessing.getState().stop(),
   });
 }

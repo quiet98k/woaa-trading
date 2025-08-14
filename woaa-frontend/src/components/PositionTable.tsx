@@ -1,14 +1,14 @@
 import { type JSX, useContext, useEffect, useState } from "react";
-import { useMyPositions, useDeletePosition } from "../hooks/usePositions";
 // import { useCreateTransaction } from "../hooks/useTransactions";
 import { ChartContext } from "../pages/Dashboard";
-import { useMe, useUpdateUserBalances } from "../hooks/useUser";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
 import { createLogger } from "../api/logs";
 import { useTradeProcessing } from "../stores/useTradeProcessing";
-import { useCloseTrade } from "../hooks/useTrade";
+import { useMyPositions } from "../hooks/usePositions";
+import { useMe } from "../hooks/useUser";
+import { useCloseTrade, useDeleteTrade } from "../hooks/useTrade"; // add delete hook & fix path
 
 /**
  * Table component to display a list of user positions with live open prices.
@@ -18,12 +18,10 @@ import { useCloseTrade } from "../hooks/useTrade";
 export function PositionTable(): JSX.Element {
   const { data: positions, isLoading } = useMyPositions();
   const { data: user } = useMe();
-  const updateBalances = useUpdateUserBalances(user?.id ?? "");
-  const deleteMutation = useDeletePosition();
   const { openPrices, mode } = useContext(ChartContext);
   const { clock } = useMarketClock();
   const logger = createLogger("PositionTable.tsx", user.email);
-
+  const [showClosed, setShowClosed] = useState(true);
   const [latestPrices, setLatestPrices] = useState<Record<string, number>>({});
   const { subscribe } = useRealTimeData((data) => {
     const msg = Array.isArray(data) ? data[0] : data;
@@ -34,6 +32,7 @@ export function PositionTable(): JSX.Element {
       }));
     }
   });
+  const deleteTradeMutation = useDeleteTrade();
 
   const symbols = positions?.map((p) => p.symbol) ?? [];
 
@@ -48,9 +47,6 @@ export function PositionTable(): JSX.Element {
   // const createTransaction = useCreateTransaction();
   const { data: settings } = useUserSettings();
   // const updatePosition = useUpdatePosition();
-  const [selectedPowerUpId, setSelectedPowerUpId] = useState<string | null>(
-    null
-  );
 
   function runFlattenQueue(
     positions: any[],
@@ -86,50 +82,8 @@ export function PositionTable(): JSX.Element {
     runNext();
   }
 
-  const handleDelete = (p: any) => {
-    console.log("[Delete] Sim Balance Before:", user?.sim_balance);
-    logger({
-      level: "INFO",
-      event_type: "ui.delete_position",
-      status: "success",
-      error_msg: null,
-      additional_info: {
-        position_id: p.id,
-        symbol: p.symbol,
-        type: p.position_type,
-        open_price: p.open_price,
-        open_shares: p.open_shares,
-      },
-      notes: "Deleted a position",
-    });
-
-    deleteMutation.mutate(p.id, {
-      onSuccess: () => {
-        if (user && p.status === "open") {
-          const refund =
-            p.open_price *
-            (p.position_type === "Long" ? p.open_shares : -p.open_shares);
-
-          const updatedSimBalance = parseFloat(
-            (user.sim_balance + refund).toFixed(2)
-          );
-
-          console.log("[Delete] Refund Amount:", refund);
-          console.log("[Delete] Sim Balance After:", updatedSimBalance);
-
-          updateBalances.mutate({
-            sim_balance: updatedSimBalance,
-          });
-        }
-      },
-    });
-  };
-
-  const handlePowerUp = () => {
-    if (!user || !settings || !selectedPowerUpId) return;
-
-    const position = positions?.find((p) => p.id === selectedPowerUpId);
-    if (!position || position.status !== "open") return;
+  const handlePowerUp = async (p: any) => {
+    if (!p || p.status !== "open") return;
 
     logger({
       level: "INFO",
@@ -137,56 +91,25 @@ export function PositionTable(): JSX.Element {
       status: "success",
       error_msg: null,
       additional_info: {
-        position_id: position?.id,
-        open_price: position?.open_price,
-        open_shares: position?.open_shares,
-        position_type: position?.position_type,
+        position_id: p.id,
+        symbol: p.symbol,
+        open_price: p.open_price,
+        open_shares: p.open_shares,
+        position_type: p.position_type,
       },
       notes: "power up position",
     });
 
-    const fee = settings.power_up_fee ?? 0;
-    const isReal = settings.power_up_type === "real";
-
-    const updatedBalances: { sim_balance?: number; real_balance?: number } = {};
-
-    // === Refund Calculation ===
-    const refund =
-      position.open_price *
-      (position.position_type === "Long"
-        ? position.open_shares
-        : -position.open_shares);
-
-    if (isReal) {
-      const before = user.real_balance ?? 0;
-      const after = parseFloat((before - fee).toFixed(2));
-
-      updatedBalances.real_balance = after;
-
-      console.log("[PowerUp] Real Balance Before:", before);
-      console.log("[PowerUp] Fee:", fee);
-      console.log("[PowerUp] Real Balance After Fee:", after);
-      console.log("[PowerUp] No refund applied for real mode.");
-    } else {
-      const before = user.sim_balance ?? 0;
-      const after = parseFloat((before - fee + refund).toFixed(2));
-
-      updatedBalances.sim_balance = after;
-
-      console.log("[PowerUp] Sim Balance Before:", before);
-      console.log("[PowerUp] Fee:", fee);
-      console.log("[PowerUp] Refund:", refund);
-      console.log("[PowerUp] Sim Balance After:", after);
+    const { start, stop } = useTradeProcessing.getState();
+    try {
+      start();
+      await deleteTradeMutation.mutateAsync(p.id);
+    } catch (err: any) {
+      console.error("Power Up failed:", err);
+      alert(err.message || "Failed to power up");
+    } finally {
+      stop();
     }
-
-    // Step 1: charge fee and apply refund
-    updateBalances.mutate(updatedBalances);
-
-    // Step 2: delete the position
-    deleteMutation.mutate(position.id);
-
-    // Step 3: clear selection
-    setSelectedPowerUpId(null);
   };
 
   const closeTradeMutation = useCloseTrade();
@@ -237,6 +160,10 @@ export function PositionTable(): JSX.Element {
     }
   };
 
+  const visiblePositions = showClosed
+    ? positions ?? []
+    : (positions ?? []).filter((p) => p.status !== "closed");
+
   return (
     <div className="w-full h-full">
       {isLoading ? (
@@ -252,39 +179,12 @@ export function PositionTable(): JSX.Element {
             >
               Flatten All
             </button>
-
-            <div className="flex items-center gap-2 text-black">
-              <select
-                value={selectedPowerUpId ?? ""}
-                onChange={(e) => {
-                  const val = e.target.value === "" ? null : e.target.value;
-                  console.log("Selected power up ID:", val);
-                  setSelectedPowerUpId(val);
-                }}
-                className="text-xs px-2 py-1 border rounded"
-              >
-                <option value="">Select Position</option>
-                {positions
-                  .filter((p) => p.status === "open")
-                  .map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.symbol} — {p.open_shares} shares
-                    </option>
-                  ))}
-              </select>
-
-              <button
-                disabled={!selectedPowerUpId}
-                onClick={handlePowerUp}
-                className={`text-xs text-white px-3 py-1 rounded ${
-                  selectedPowerUpId
-                    ? "bg-purple-500 hover:bg-purple-600"
-                    : "bg-gray-400 cursor-not-allowed"
-                }`}
-              >
-                Power Up
-              </button>
-            </div>
+            <button
+              className="ml-2 text-xs text-white bg-gray-600 hover:bg-gray-700 px-3 py-1 rounded"
+              onClick={() => setShowClosed((v) => !v)}
+            >
+              {showClosed ? "Hide Closed" : "Show Closed"}
+            </button>
           </div>
 
           {/* ✅ Scrollable table container */}
@@ -303,7 +203,7 @@ export function PositionTable(): JSX.Element {
                 </tr>
               </thead>
               <tbody>
-                {positions.map((p) => {
+                {visiblePositions.map((p) => {
                   let currentPrice: number | null = null;
 
                   if (mode === "historical") {
@@ -363,12 +263,15 @@ export function PositionTable(): JSX.Element {
                           </button>
                         )}
 
-                        <button
-                          onClick={() => handleDelete(p)}
-                          className="text-red-500 hover:underline"
-                        >
-                          Delete
-                        </button>
+                        {p.status === "open" && (
+                          <button
+                            onClick={() => handlePowerUp(p)}
+                            className="text-purple-600 hover:underline"
+                            title="Charge fee (per settings), refund principal to sim, delete position"
+                          >
+                            Power Up
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

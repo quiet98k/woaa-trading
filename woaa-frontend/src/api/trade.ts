@@ -85,3 +85,41 @@ export async function closeTrade(
 
   return res.json();
 }
+
+/**
+ * Delete (power-up delete) an open position.
+ * Charges fee (per user settings), refunds principal to sim, deletes position.
+ *
+ * @param positionId - ID of the position to delete
+ */
+export async function deleteTrade(positionId: string): Promise<any> {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${BASE_URL}/trades/item/${positionId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  // TODO: add log
+
+  if (!res.ok) {
+    let errorMsg = res.statusText;
+    try {
+      const errData = await res.clone().json();
+      errorMsg = errData.detail || errData.message || res.statusText;
+    } catch {
+      /* ignore JSON parse errors */
+    }
+    throw new Error(errorMsg);
+  }
+
+  // Handle both 200 with JSON body and 204 No Content
+  if (res.status === 204) return { ok: true };
+  try {
+    return await res.json();
+  } catch {
+    return { ok: true };
+  }
+}
