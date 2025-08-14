@@ -122,10 +122,32 @@ export function UserPortfolio(): JSX.Element {
   const profit = Math.round(rawProfit * 100) / 100;
   const netWorth = profit + initial;
 
+  // 1) Keep computing the live values as you already do
+  const liveProfit = profit; // your existing computed profit
+  const liveNetWorth = netWorth; // your existing computed net worth
+
+  // 2) Hold a snapshot to display while processing
+  const snapshotRef = useRef({ profit: liveProfit, netWorth: liveNetWorth });
+
+  // When processing ends (or during normal flow), refresh the snapshot to the latest live values
+  useEffect(() => {
+    if (!processing) {
+      snapshotRef.current = { profit: liveProfit, netWorth: liveNetWorth };
+    } else {
+      console.log("profit change triggered, but processing is true");
+    }
+  }, [processing, liveProfit, liveNetWorth]);
+
+  // 3) Choose what to render
+  const displayedProfit = processing ? snapshotRef.current.profit : liveProfit;
+  const displayedNetWorth = processing
+    ? snapshotRef.current.netWorth
+    : liveNetWorth;
+
   const profitColor =
-    profit > 0
+    displayedProfit > 0
       ? "text-green-600"
-      : profit < 0
+      : displayedProfit < 0
       ? "text-red-600"
       : "text-gray-600";
 
@@ -292,6 +314,10 @@ export function UserPortfolio(): JSX.Element {
     // latestPrices,
   ]);
 
+  useEffect(() => {
+    console.log("displayedProfit: ", displayedProfit);
+  }),
+    [profit];
   // keep track of previous mode to detect changes
   const prevMode = useRef(mode);
 
@@ -621,7 +647,7 @@ export function UserPortfolio(): JSX.Element {
                 $
                 {marketClosed
                   ? "—"
-                  : profit.toLocaleString(undefined, {
+                  : displayedProfit.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                     })}
               </span>
@@ -637,7 +663,7 @@ export function UserPortfolio(): JSX.Element {
                 $
                 {marketClosed
                   ? "—"
-                  : netWorth.toLocaleString(undefined, {
+                  : displayedNetWorth.toLocaleString(undefined, {
                       minimumFractionDigits: 2,
                     })}
               </span>

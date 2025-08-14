@@ -216,6 +216,7 @@ export function PositionTable(): JSX.Element {
     });
 
     const { setProcessing } = useTradeProcessing.getState();
+    console.log("set Processing True in Position Table");
     setProcessing(true);
 
     try {
@@ -231,6 +232,7 @@ export function PositionTable(): JSX.Element {
       console.error("Close trade failed:", err);
       alert(err.message || "Failed to close trade");
     } finally {
+      console.log("set Processing False in Position Table");
       setProcessing(false);
     }
   };

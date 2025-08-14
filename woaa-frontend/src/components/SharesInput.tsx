@@ -43,6 +43,7 @@ export default function SharesInput(): JSX.Element {
     }
 
     const { setProcessing } = useTradeProcessing.getState();
+    console.log("set Processing True in SharesInput");
     setProcessing(true);
 
     try {
@@ -59,6 +60,7 @@ export default function SharesInput(): JSX.Element {
       console.error("Trade creation failed:", err);
       // alert(err.message || "Failed to create trade");
     } finally {
+      console.log("set Processing False in SharesInput");
       setProcessing(false);
     }
   };

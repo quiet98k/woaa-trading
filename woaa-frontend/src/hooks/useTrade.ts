@@ -1,35 +1,30 @@
-/**
- * @fileoverview React Query hooks for trade management.
- */
-
+// hooks/useTrades.ts
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { closeTrade, createTrade } from "../api/trade";
+import { useTradeProcessing } from "../stores/useTradeProcessing";
 
-/**
- * Hook to create a new trade for the authenticated user.
- */
 export function useCreateTrade() {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
+    mutationKey: ["createTrade"],
     mutationFn: createTrade,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["me"] });
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["positions"] });
+    onMutate: () => useTradeProcessing.getState().start(),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["me"] }),
+        qc.invalidateQueries({ queryKey: ["transactions"] }),
+        qc.invalidateQueries({ queryKey: ["positions"] }),
+      ]);
     },
-    onError: (error: any) => {
-      // 🔹 Show the exact error message from the backend
-      alert(error.message || "Failed to create trade");
-    },
+    onError: (e: any) => alert(e.message || "Failed to create trade"),
+    onSettled: () => useTradeProcessing.getState().stop(),
   });
 }
 
-/**
- * Hook to close an existing trade (position).
- */
 export function useCloseTrade() {
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
+    mutationKey: ["closeTrade"],
     mutationFn: ({
       positionId,
       currentPrice,
@@ -39,13 +34,15 @@ export function useCloseTrade() {
       currentPrice: number;
       notes?: string;
     }) => closeTrade(positionId, currentPrice, notes),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["me"] });
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["positions"] });
+    onMutate: () => useTradeProcessing.getState().start(),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["me"] }),
+        qc.invalidateQueries({ queryKey: ["transactions"] }),
+        qc.invalidateQueries({ queryKey: ["positions"] }),
+      ]);
     },
-    onError: (error: any) => {
-      alert(error.message || "Failed to close trade");
-    },
+    onError: (e: any) => alert(e.message || "Failed to close trade"),
+    onSettled: () => useTradeProcessing.getState().stop(),
   });
 }
