@@ -5,7 +5,7 @@ import { useRealTimeData } from "../hooks/useRealTimeData";
 import { useMarketClock } from "../hooks/useMarketClock";
 import { useTradeProcessing } from "../stores/useTradeProcessing";
 import { useCreateTrade } from "../hooks/useTrade"; // ✅ new hook
-
+import { useMyPositions } from "../hooks/usePositions";
 
 export default function RealTimeSharesInput(): JSX.Element {
   const [symbol, setSymbol] = useState("");
@@ -42,11 +42,47 @@ export default function RealTimeSharesInput(): JSX.Element {
     }
   };
 
+  const { data: positions } = useMyPositions();
+
+  const existingShortNotional =
+    positions?.reduce((sum, p) => {
+      if (p.position_type === "Short" && p.status === "open") {
+        // ✅ entry (open) price for short notional
+        return sum + (p.open_price ?? 0) * (p.open_shares ?? 0);
+      }
+      return sum;
+    }, 0) ?? 0;
+
+  const sim = user?.sim_balance ?? 0;
+  const shortCapacity = Math.max(0, sim - existingShortNotional * 2);
+
+  const newShortNotional = (tradePrice ?? 0) * Math.max(0, shares);
+  const canShort = newShortNotional <= shortCapacity;
+
   const handleTrade = async (type: "Long" | "Short") => {
     if (!user || !settings || !tradePrice || !trackedSymbol) return;
     if (shares <= 0) {
       alert("Shares must be greater than 0.");
       return;
+    }
+
+    // 🚧 Aggregate short cap (entry prices), adjusted for short proceeds in sim
+    if (type === "Short") {
+      if (!canShort) {
+        const maxShares = tradePrice
+          ? Math.max(0, Math.floor(shortCapacity / tradePrice))
+          : 0;
+        alert(
+          `Short limit exceeded.\n` +
+            `Existing short value: $${existingShortNotional.toFixed(2)}\n` +
+            `Available capacity: $${shortCapacity.toFixed(2)}\n` +
+            `This order needs: $${newShortNotional.toFixed(2)}\n` +
+            (maxShares > 0
+              ? `Max shares you can short now: ${maxShares}`
+              : `You cannot short more right now.`)
+        );
+        return;
+      }
     }
 
     const { setProcessing } = useTradeProcessing.getState();
@@ -144,6 +180,9 @@ export default function RealTimeSharesInput(): JSX.Element {
           Short
         </button>
       </div>
+      <p className="text-xs text-gray-500">
+        Remaining short capacity: $ {shortCapacity.toFixed(2)}
+      </p>
     </div>
   );
 }
