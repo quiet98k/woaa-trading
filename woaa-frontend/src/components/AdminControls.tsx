@@ -118,6 +118,71 @@ function NumberInputCard({
   );
 }
 
+function SettingCard({
+  label,
+  value,
+  onChange,
+  unit,
+  toggleType,
+  onToggle,
+  area,
+  max,
+  step,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  unit?: string;
+  toggleType?: "real" | "sim";
+  onToggle?: () => void;
+  area: string;
+  max: number;
+  step: number;
+}) {
+  return (
+    <div
+      className="border border-gray-400 rounded-md p-2 flex flex-col justify-between text-gray-700 text-sm"
+      style={{ gridArea: area }}
+    >
+      <div className="font-medium text-center mb-2">{label}</div>
+      <div className="flex items-center gap-2">
+        <input
+          type="range"
+          min={0}
+          max={max}
+          step={step}
+          className="w-full"
+          value={value}
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+        />
+        <span className="w-12 text-right">
+          {value.toFixed(step >= 1 ? 0 : 1)}
+          {unit ?? ""}
+        </span>
+      </div>
+
+      {toggleType && onToggle && (
+        <div className="flex flex-col items-center mt-2 text-[10px] text-gray-600">
+          <div className="flex items-center gap-1">
+            <span>Simulate</span>
+            <div
+              className={`w-8 h-4 flex items-center rounded-full p-[2px] cursor-pointer transition-all ${
+                toggleType === "real"
+                  ? "bg-blue-400 justify-end"
+                  : "bg-green-400 justify-start"
+              }`}
+              onClick={onToggle}
+            >
+              <div className="w-3 h-3 bg-white rounded-full shadow-sm transition-all" />
+            </div>
+            <span>Real</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * AdminSettingsPanel component to control all user setting parameters for the current user.
  */
@@ -229,15 +294,14 @@ export function AdminSettingsPanel(): JSX.Element {
           placeholder="0.00"
         />
 
-        <NumberInputCard
+        <SettingCard
           label="Margin Limit"
           value={marginValue}
           onChange={setMarginValue}
-          unit="$"
+          unit=""
           area="b"
-          min={0}
-          step={100}
-          placeholder="0"
+          max={100000000}
+          step={1000}
         />
 
         {/* Gain & Drawdown */}
@@ -249,107 +313,60 @@ export function AdminSettingsPanel(): JSX.Element {
             Gain &amp; Drawdown
           </div>
 
-          <div className="flex items-center gap-2 text-sm mb-2">
-            <span className="w-[100px] text-gray-500">Init. Balance</span>
+          <div className="flex items-center gap-2 text-xs mb-2">
+            <span className="w-[80px] text-gray-500">Init. Balance</span>
             <input
               type="number"
-              inputMode="decimal"
               className="w-full border rounded px-2 py-1 text-sm text-right"
               min={0}
               step={100}
-              value={Number.isNaN(initialSimBalance) ? "" : initialSimBalance}
-              onChange={(e) => {
-                const parsed = safeParseNumber(
-                  e.target.value,
-                  initialSimBalance
-                );
-                setInitialSimBalance(Number.isNaN(parsed) ? NaN : parsed);
-              }}
-              onBlur={(e) => {
-                const parsed = safeParseNumber(
-                  e.target.value,
-                  initialSimBalance
-                );
-                setInitialSimBalance(
-                  Number.isNaN(parsed) ? 0 : Math.max(0, parsed)
-                );
-              }}
+              value={initialSimBalance}
+              onChange={(e) =>
+                setInitialSimBalance(parseFloat(e.target.value) || 0)
+              }
             />
-            <span className="text-sm text-gray-500">$</span>
+            <span className="text-xs text-gray-500">$</span>
           </div>
 
-          <div className="flex items-center gap-2 text-sm">
-            <span className="w-[100px] text-gray-500">Gain Threshold</span>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="w-[80px] text-gray-500">Gain Threshold</span>
             <input
-              type="number"
-              inputMode="decimal"
-              className="w-full border rounded px-2 py-1 text-sm text-right"
+              type="range"
               min={0}
               max={100}
-              step={0.1}
-              value={Number.isNaN(gainThreshold) ? "" : gainThreshold}
-              onChange={(e) => {
-                const n = safeParseNumber(e.target.value, gainThreshold);
-                setGainThreshold(Number.isNaN(n) ? NaN : n);
-              }}
-              onBlur={(e) => {
-                const n = safeParseNumber(e.target.value, gainThreshold);
-                const clamped = Math.min(
-                  100,
-                  Math.max(0, Number.isNaN(n) ? 0 : n)
-                );
-                setGainThreshold(clamped);
-              }}
-              placeholder="0–100"
+              step={1}
+              className="w-full"
+              value={gainThreshold}
+              onChange={(e) => setGainThreshold(parseFloat(e.target.value))}
             />
-            <span className="w-10 text-right">%</span>
+            <span className="w-10 text-right">{gainThreshold.toFixed(0)}%</span>
           </div>
-          <div className="pl-[100px] text-[10px] text-gray-500 mb-1">
-            ≈ $
-            {(Number.isNaN(initialSimBalance) || Number.isNaN(gainThreshold)
-              ? 0
-              : (initialSimBalance * gainThreshold) / 100
-            ).toFixed(2)}{" "}
-            to win
+          <div className="pl-[85px] text-[10px] text-gray-500 mb-1">
+            ≈ ${((initialSimBalance * gainThreshold) / 100).toFixed(2)} to win
           </div>
 
-          <div className="flex items-center gap-2 text-sm mt-2">
-            <span className="w-[100px] text-gray-500">Drawdown Threshold</span>
+          <div className="flex items-center gap-2 text-xs mt-2">
+            <span className="w-[80px] text-gray-500">Drawdown Threshold</span>
             <input
-              type="number"
-              inputMode="decimal"
-              className="w-full border rounded px-2 py-1 text-sm text-right"
+              type="range"
               min={0}
               max={100}
-              step={0.1}
-              value={Number.isNaN(drawdownThreshold) ? "" : drawdownThreshold}
-              onChange={(e) => {
-                const n = safeParseNumber(e.target.value, drawdownThreshold);
-                setDrawdownThreshold(Number.isNaN(n) ? NaN : n);
-              }}
-              onBlur={(e) => {
-                const n = safeParseNumber(e.target.value, drawdownThreshold);
-                const clamped = Math.min(
-                  100,
-                  Math.max(0, Number.isNaN(n) ? 0 : n)
-                );
-                setDrawdownThreshold(clamped);
-              }}
-              placeholder="0–100"
+              step={1}
+              className="w-full"
+              value={drawdownThreshold}
+              onChange={(e) => setDrawdownThreshold(parseFloat(e.target.value))}
             />
-            <span className="w-10 text-right">%</span>
+            <span className="w-10 text-right">
+              {drawdownThreshold.toFixed(0)}%
+            </span>
           </div>
-          <div className="pl-[100px] text-[10px] text-gray-500">
-            ≈ $
-            {(Number.isNaN(initialSimBalance) || Number.isNaN(drawdownThreshold)
-              ? 0
-              : (initialSimBalance * drawdownThreshold) / 100
-            ).toFixed(2)}{" "}
-            to lose
+          <div className="pl-[85px] text-[10px] text-gray-500">
+            ≈ ${((initialSimBalance * drawdownThreshold) / 100).toFixed(2)} to
+            lose
           </div>
         </div>
 
-        <NumberInputCard
+        <SettingCard
           label="Holding Cost"
           value={holdingCostValue}
           onChange={setHoldingCostValue}
@@ -359,13 +376,11 @@ export function AdminSettingsPanel(): JSX.Element {
             setHoldingCostType((p) => (p === "real" ? "sim" : "real"))
           }
           area="d"
-          min={0}
           max={10}
-          step={0.01}
-          placeholder="0.00"
+          step={0.5}
         />
 
-        <NumberInputCard
+        <SettingCard
           label="Overnight Fee"
           value={overnightFeeValue}
           onChange={setOvernightFeeValue}
@@ -375,13 +390,11 @@ export function AdminSettingsPanel(): JSX.Element {
             setOvernightFeeType((p) => (p === "real" ? "sim" : "real"))
           }
           area="e"
-          min={0}
           max={50}
-          step={0.01}
-          placeholder="0.00"
+          step={1}
         />
 
-        <NumberInputCard
+        <SettingCard
           label="Power Up Fee"
           value={powerUpValue}
           onChange={setPowerUpValue}
@@ -391,10 +404,8 @@ export function AdminSettingsPanel(): JSX.Element {
             setPowerUpType((p) => (p === "real" ? "sim" : "real"))
           }
           area="f"
-          min={0}
           max={100}
-          step={0.01}
-          placeholder="0.00"
+          step={1}
         />
 
         <div
