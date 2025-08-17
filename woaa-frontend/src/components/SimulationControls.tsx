@@ -151,13 +151,13 @@ export default function SimulationControls(): JSX.Element {
     // Step 1: Reset sim_balance (user model)
     const initialSim = settings.initial_sim_balance ?? 10000;
     updateBalances.mutate(
-      { sim_balance: initialSim, real_balance: 0 },
+      { sim_balance: initialSim, real_balance: 1000 },
       {
         onSuccess: () => {
           console.log(
             "[Reset Data] sim_balance reset to",
             initialSim,
-            "and real_balance reset to 0"
+            "and real_balance reset to 1000"
           );
         },
         onError: (err) => {
